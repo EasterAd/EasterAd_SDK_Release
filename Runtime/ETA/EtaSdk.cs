@@ -1,14 +1,16 @@
+#nullable enable
 using System.Collections.Generic;
 using UnityEngine;
 using ETA_Implementation;
 using ETA_Implementation.Impression;
+using System;
+using System.IO;
 
 #if UNITY_EDITOR
 using UnityEditor;
-#else
-using System.IO;
-using System;
 #endif
+
+#pragma warning disable CS1591 // TODO: 배포전 삭제
 
 namespace ETA
 {
@@ -23,16 +25,16 @@ namespace ETA
     public class EtaSdk : MonoBehaviour
     {
         private static readonly ImpressionCtrl ImpressionCtrl = new ImpressionCtrl();
-        private static readonly EtaSdkClient EtaSdkClient = EtaSdkClient.Instance;
-        private static EtaSdk _instance = null!;
-        private bool _onceInitialized;
+        private EtaSdkClient? _etaSdkClient;
+        private static EtaSdk? _instance;
+        internal static bool OnceInitialized { get; private set; }
 
-        public Camera targetCamera;
-
-        [SerializeField]
-        private string appId = null!;
-        [SerializeField]
-        private bool logEnable;
+        public Camera? targetCamera;
+        internal string gameId = null!;
+        internal string? sdkKey;
+        internal bool logEnable;
+        
+        internal static readonly Queue<Item> ItemAwakeQueue = new Queue<Item>();
         
         /// <summary>
         /// <para xml:lang="ko"><c>EtaSdk</c>의 인스턴스를 가져옵니다. 인스턴스가 없으면 새로 생성합니다.</para>
@@ -47,41 +49,91 @@ namespace ETA
                     _instance = FindObjectOfType<EtaSdk>();
                     if (_instance == null)
                     {
-                        _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
+                        throw new Exception("EtaSdk is not Enabled, Please Remove EasterAd Script or Enable EtaSdk at Window -> EasterAd");
                     }
                 }
+                
+                _instance._etaSdkClient ??= EtaSdkClient.CreateClient(_instance);
+                
                 return _instance;
             }
         }
-
-        public void SetCamera(Camera camera)
+        
+        public static void CreateEtaSdk()
         {
-            CameraManager.SetCamera(camera);
+            if(_instance == null)
+            {
+                _instance = FindObjectOfType<EtaSdk>();
+                if (_instance == null)
+                {
+                    _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
+                }
+            }
         }
 
+        
+        public static void DestroyCall()
+        {
+            if(_instance == null) _instance = FindObjectOfType<EtaSdk>();
+            if (_instance != null && _instance.gameObject != null)
+            {
+                DestroyImmediate(_instance.gameObject);
+            }
+        }
+
+        public void SetCamera(Camera userCamera)
+        {
+            CameraManager.SetCamera(userCamera);
+        }
+
+        private EtaSdk()
+        {
+            string filename = "ETA_Config.txt";
+            string filepath = Path.Combine(Application.streamingAssetsPath, filename);
+            if (File.Exists(filepath) == false) { return; }
+            
+            string[] config = File.ReadAllLines(filepath);
+            gameId = config[1];
+            sdkKey = config[2];
+            logEnable = bool.Parse(config[3]);
+        }
+        
         private void Awake()
         {
-            if (_instance != null && _instance != this)
+            if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
             Initialize();
             DontDestroyOnLoad(gameObject);
+
+            while (ItemAwakeQueue.Count > 0)
+            {
+                ItemAwakeQueue.Dequeue().Awake();
+            }
         }
 
         void Update()
         {
-            EtaSdkClient.Instance.LogEnable = logEnable;
+            _etaSdkClient!.LogEnable = logEnable;
             ImpressionCtrl.ImpressionRoutine();
 #if UNITY_EDITOR
             DebugLogger.updateCurrentGameDisplay();
 #endif
+
+            if (targetCamera != null) return;
+
+            targetCamera = Camera.main;
+            if (targetCamera != null)
+            {
+                SetCamera(targetCamera);
+            }
         }
 
         private void OnApplicationQuit()
         {
-            EtaSdkClient.OnApplicationQuit();
+            _etaSdkClient!.OnApplicationQuit();
         }
 
 #if UNITY_EDITOR
@@ -90,9 +142,7 @@ namespace ETA
             if (!logEnable) { return; }
             DebugLogger.DrawDebugGizmos();
         }
-#endif
 
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
         void OnGUI()
         {
             if (!logEnable) { return; }
@@ -106,15 +156,15 @@ namespace ETA
         /// </summary>
         private void Initialize()
         {
-            if (_onceInitialized)
+            if (OnceInitialized)
             {
                 Debug.Log("EtaSdk is already initialized");
                 return;
             }
-            EtaSdkClient.Initialize(appId, logEnable);
-            if (targetCamera) { SetCamera(targetCamera); }
-            EtaSdkClient.AxesNames = GetAxesNames();
-            _onceInitialized = true;
+            _etaSdkClient!.Initialize(gameId, logEnable, sdkKey);
+            if (targetCamera!=null) { SetCamera(targetCamera); }
+            _etaSdkClient.AxesNames = GetAxesNames();
+            OnceInitialized = true;
         }
 
         /// <summary>
@@ -132,7 +182,7 @@ namespace ETA
 #nullable enable
         public ItemClient? GetItemClient(string adUnitId)
         {
-            return EtaSdkClient.GetItemClient(adUnitId);
+            return _etaSdkClient!.GetItemClient(adUnitId);
         }
 #nullable disable
 
@@ -147,7 +197,7 @@ namespace ETA
         /// </returns>
         public List<string> GetItemClientList()
         {
-            return EtaSdkClient.GetItemClientList();
+            return _etaSdkClient!.GetItemClientList();
         }
 
         /// <summary>
@@ -160,7 +210,22 @@ namespace ETA
         /// </returns>
         public Dictionary<string, ItemClient> GetItemClient()
         {
-            return EtaSdkClient.GetItemClients();
+            return _etaSdkClient!.GetItemClient();
+        }
+        
+        public void AddItemClient(string key, in ItemClient itemClient)
+        {
+            _etaSdkClient!.AddItemClient(key, itemClient);
+        }
+        
+        public void UpdateItemClient(string key, in ItemClient itemClient)
+        {
+            _etaSdkClient!.UpdateItemClient(key, itemClient);
+        }
+        
+        public void RemoveItemClient(string key)
+        {
+            _etaSdkClient!.RemoveItemClient(key);
         }
 
         private List<string> GetAxesNames()

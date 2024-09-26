@@ -9,6 +9,11 @@ namespace ETA
     /// </summary>
     public class Plane : Item
     {
+        
+        public override void Load()
+        {
+            FuncCtrl.FuncCall(in _client, "Load");
+        }
 
         /// <summary>  
         /// <para xml:lang="ko"><c>Plane</c>의 생성자입니다.</para>  

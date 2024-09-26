@@ -1,6 +1,9 @@
-﻿using UnityEngine;
+﻿using System.IO;
+using UnityEngine;
 
 using ETA_Implementation;
+using UnityEngine.Serialization;
+#pragma warning disable CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
 
 namespace ETA
 {
@@ -10,58 +13,49 @@ namespace ETA
     /// </summary>
     public abstract class Item : MonoBehaviour
     {
-        private ItemClient _client = null!;
-        [SerializeField] 
-        private string adUnitId = null!; //must be set in Unity Editor
+        protected ItemClient _client = null!;
+        public ItemClient Client => _client;
+        
+        public string adUnitId = null!; //must be set in Unity Editor
+        public bool allowImpression = true;
 
-        void Awake() // todo change Destroy process
+        internal void Awake() // todo change Destroy process
         {
-            if (EtaSdkClient.Instance.GetItemClient(adUnitId) != null)
+            if(EtaSdk.OnceInitialized == false)
+            {
+                EtaSdk.ItemAwakeQueue.Enqueue(this);
+                EnableSDK();
+                return;
+            }
+            
+            if (EtaSdk.Instance.GetItemClient(adUnitId) != null)
             {
                 DebugLogger.Log("Item already exist: " + adUnitId);
             }
 
             _client = GetClient(gameObject, adUnitId);
-            EtaSdkClient.Instance.AddItemClient(adUnitId, in _client);
+            EtaSdk.Instance.AddItemClient(adUnitId, in _client);
+            DebugLogger.Log("Item added: " + adUnitId);
         }
 
         private void OnDestroy()
         {
-            EtaSdkClient.Instance.RemoveItemClient(adUnitId);
+            try{
+                EtaSdk.Instance.RemoveItemClient(adUnitId);
+            }
+            catch
+            {
+                // ignored
+            }
         }
-        
 
-        // /// <summary>
-        // /// <para xml:lang="ko">서버에서 광고를 로드합니다.</para>
-        // /// <para xml:lang="en">Load Ad from server.</para>
-        // /// </summary>
-        // /// <remarks>
-        // /// <para xml:lang="ko"><see cref="Show(object, EventArgs)"/>를 호출하기 전에 호출해야 하며, 직접 호출하지 마십시오.</para>
-        // /// <para xml:lang="en">Should be called before <see cref="Show(object, EventArgs)"/>, and do not call directly.</para>
-        // /// </remarks>
-        // public void Load(object sender, EventArgs e)
-        // {
-        //     Task.Run(() => { Client.Load();}); // Async processing
-        // }
-        //
-        // /// <summary>
-        // /// <para xml:lang="ko">GameObject에 광고를 렌더링합니다. 이 메서드를 <see cref="Load"/> 전에 호출하면 먼저 <see cref="Load"/> 메서드가 호출됩니다.</para>
-        // /// <para xml:lang="en">Render Ad on the GameObject. When call this method before <see cref="Load"/>, it will be called <see cref="Load"/> method first.</para>
-        // /// </summary>
-        // /// <remarks>
-        // /// <para xml:lang="ko">메인 스레드 외부에서 이 메서드를 호출하면 오류가 발생합니다.</para>
-        // /// <para xml:lang="en">Call this method outside of the main thread will cause an error.</para>
-        // /// </remarks>
-        // public void Show(object sender, EventArgs e)
-        // {
-        //     if (Client.Status != ItemStatus.Loaded) // if not loaded, Load first
-        //     {
-        //         Load(this, EventArgs.Empty);
-        //         if (Client.Status != ItemStatus.Loaded) return;
-        //     }
-        //     Client.Show(); // Do not call this method outside of the main thread!!
-        // }
-        //
+
+        /// <summary>
+        /// <para xml:lang="ko">서버에서 광고를 로드하고 표시합니다.</para>
+        /// <para xml:lang="en">Load Ad from server and show if.</para>
+        /// </summary>
+        public abstract void Load();
+        
         // /// <summary>
         // /// <para xml:lang="ko">텍스처를 일반 텍스처로 변경합니다.</para>
         // /// <para xml:lang="en">Change texture to general texture.</para>
@@ -107,5 +101,20 @@ namespace ETA
         /// </summary>
         protected abstract ItemClient GetClient(GameObject clientObject, string adUnitId);
 
+        
+        private void EnableSDK()
+        {
+            string filename = "ETA_Config.txt";
+            string filepath = Path.Combine(Application.streamingAssetsPath, filename);
+            if (File.Exists(filepath) == false) { return; }
+            
+            string[] config = File.ReadAllLines(filepath);
+            bool easterAdEnabled = bool.Parse(config[0]);
+            
+            if (easterAdEnabled)
+            {
+                EtaSdk.CreateEtaSdk();
+            }
+        }
     }
 }
