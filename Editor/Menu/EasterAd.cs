@@ -25,6 +25,19 @@ namespace ETA_Editor.Menu
             EditorWindow.GetWindow(typeof(EasterAd));
         }
 
+        void OnEnable()
+        {
+            string filename = "ETA_Config.txt";
+            string filepath = Path.Combine(Application.streamingAssetsPath, filename);
+            if (File.Exists(filepath) == false) { return; }
+            
+            string[] config = File.ReadAllLines(filepath);
+            _easterAdEnabled = bool.Parse(config[0]);
+            _tempGameId = config[1];
+            _tempSdkKey = config[2];
+            _tempLogEnable = bool.Parse(config[3]);
+        }
+
         private void OnGUI()
         {
             GUILayout.Label ("Base Settings", EditorStyles.boldLabel);
