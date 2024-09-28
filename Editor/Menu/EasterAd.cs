@@ -1,11 +1,10 @@
-﻿#nullable enable
-using System.Text;
-using System.IO;
+﻿using System.Text;
 using ETA;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
-using Object = UnityEngine.Object;
+
+// ReSharper disable once RedundantUsingDirective
+using System.IO;
 
 namespace ETA_Editor.Menu
 {
@@ -16,13 +15,18 @@ namespace ETA_Editor.Menu
         private string _tempGameId = "";
         private string _tempSdkKey = "";
         private bool _tempLogEnable;
+        
+        private Vector2 _scrollPosition=Vector2.zero;
     
         // Add menu item named "My Window" to the Window menu
         [MenuItem("Window/EasterAd")]
         private static void ShowWindow()
         {
             //Show existing window instance. If one doesn't exist, make one.
-            EditorWindow.GetWindow(typeof(EasterAd));
+            EasterAd window = (EasterAd)EditorWindow.GetWindow(typeof(EasterAd));
+            window.titleContent = new GUIContent("EasterAd");
+            window.minSize = new Vector2(820,350);
+            window.Show();
         }
 
         void OnEnable()
@@ -77,21 +81,23 @@ namespace ETA_Editor.Menu
                     AssetDatabase.Refresh();
                 }
             }
-            
+
             EditorGUILayout.Space();
             
             
-            //list
-            EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField("List of Items", EditorStyles.boldLabel);
+            
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Index", GUILayout.Width(50));
             EditorGUILayout.LabelField("Item ID", GUILayout.Width(200));
             EditorGUILayout.LabelField("Location",GUILayout.Width(150));
-            EditorGUILayout.LabelField("Status",GUILayout.Width(150));
-            EditorGUILayout.LabelField("Impression",GUILayout.Width(150));
+            EditorGUILayout.LabelField("Status",GUILayout.Width(100));
+            EditorGUILayout.LabelField("Impression",GUILayout.Width(100));
+            EditorGUILayout.LabelField("Custom Load",GUILayout.Width(100));
             EditorGUILayout.LabelField("Remove", GUILayout.Width(75));
             EditorGUILayout.EndHorizontal();
+            
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(820), GUILayout.Height(200));
             int index = 1;
             foreach (Item item in FindObjectsOfType<Item>())
             {
@@ -102,14 +108,15 @@ namespace ETA_Editor.Menu
                 //Playmode 일때 상태 표시
                 if(Application.isPlaying)
                 {
-                    EditorGUILayout.LabelField(item.Client.GetStatus().ToString(),GUILayout.Width(150));
+                    EditorGUILayout.LabelField(item.Client.GetStatus().ToString(),GUILayout.Width(100));
                     item.Client.AllowImpression = item.allowImpression;
                 }
                 else
                 {
-                    EditorGUILayout.LabelField("Editor Mode",GUILayout.Width(150));
+                    EditorGUILayout.LabelField("Editor Mode",GUILayout.Width(100));
                 }
-                item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(150));
+                item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(100));
+                item.customLoad = GUILayout.Toggle(item.customLoad, "", GUILayout.Width(100));
                 
                 if (GUILayout.Button("Remove", GUILayout.Width(75)))
                 {
@@ -118,13 +125,41 @@ namespace ETA_Editor.Menu
                 EditorGUILayout.EndHorizontal();
                 index++;
             }
-            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
             EditorGUILayout.EndToggleGroup ();
+
+            GUILayout.Label("Import Ad Assets", EditorStyles.boldLabel);
+            if (GUILayout.Button("Import Built-in Render Pipeline Assets"))
+            {
+                Debug.Log("Importing " + "Packages/com.autovertise.easterad/Packages/EasterAd_BuiltIn.unitypackage");
+                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_BuiltIn.unitypackage");
+            }
+            if (GUILayout.Button("Import Universal Render Pipeline (URP) Assets"))
+            {
+                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_URP.unitypackage");
+            }
+            if (GUILayout.Button("Import High Definition Render Pipeline (HDRP) Assets"))
+            {
+                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_HDRP.unitypackage");
+            }
 
             // if (!Application.isPlaying)
             // {
             //     EtaSdk.DestroyCall();
             // }
         }
+
+        private void ImportPackage(string packageName)
+        {
+            if (!string.IsNullOrEmpty(packageName))
+            {
+                AssetDatabase.ImportPackage(packageName, true);
+            }
+            else
+            {
+                Debug.Log(packageName + " is not found.");
+            }
+        }
+
     }
 }

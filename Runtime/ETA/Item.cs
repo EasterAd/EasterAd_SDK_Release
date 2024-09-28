@@ -1,8 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using UnityEngine;
-
 using ETA_Implementation;
-using UnityEngine.Serialization;
 #pragma warning disable CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
 
 namespace ETA
@@ -18,6 +17,8 @@ namespace ETA
         
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
+        public bool customLoad;
+        
 
         internal void Awake() // todo change Destroy process
         {
@@ -36,6 +37,15 @@ namespace ETA
             _client = GetClient(gameObject, adUnitId);
             EtaSdk.Instance.AddItemClient(adUnitId, in _client);
             DebugLogger.Log("Item added: " + adUnitId);
+        }
+
+        private void Start()
+        {
+            if (customLoad)
+            {
+                return;
+            }
+            Load();
         }
 
         private void OnDestroy()

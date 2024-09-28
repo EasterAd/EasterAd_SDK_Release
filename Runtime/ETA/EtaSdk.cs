@@ -1,3 +1,4 @@
+// ReSharper disable once RedundantNullableDirective
 #nullable enable
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,8 +31,8 @@ namespace ETA
         internal static bool OnceInitialized { get; private set; }
 
         public Camera? targetCamera;
-        internal string gameId = null!;
-        internal string? sdkKey;
+        internal string gameId = "";
+        internal string sdkKey = "";
         internal bool logEnable;
         
         internal static readonly Queue<Item> ItemAwakeQueue = new Queue<Item>();
