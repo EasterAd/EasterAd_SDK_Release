@@ -93,7 +93,7 @@ namespace ETA_Editor.Menu
             EditorGUILayout.LabelField("Location",GUILayout.Width(150));
             EditorGUILayout.LabelField("Status",GUILayout.Width(100));
             EditorGUILayout.LabelField("Impression",GUILayout.Width(100));
-            EditorGUILayout.LabelField("Custom Load",GUILayout.Width(100));
+            EditorGUILayout.LabelField("Load On Start",GUILayout.Width(100));
             EditorGUILayout.LabelField("Remove", GUILayout.Width(75));
             EditorGUILayout.EndHorizontal();
             
@@ -116,7 +116,7 @@ namespace ETA_Editor.Menu
                     EditorGUILayout.LabelField("Editor Mode",GUILayout.Width(100));
                 }
                 item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(100));
-                item.customLoad = GUILayout.Toggle(item.customLoad, "", GUILayout.Width(100));
+                item.loadOnStart = GUILayout.Toggle(item.loadOnStart, "", GUILayout.Width(100));
                 
                 if (GUILayout.Button("Remove", GUILayout.Width(75)))
                 {
@@ -131,7 +131,6 @@ namespace ETA_Editor.Menu
             GUILayout.Label("Import Ad Assets", EditorStyles.boldLabel);
             if (GUILayout.Button("Import Built-in Render Pipeline Assets"))
             {
-                Debug.Log("Importing " + "Packages/com.autovertise.easterad/Packages/EasterAd_BuiltIn.unitypackage");
                 ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_BuiltIn.unitypackage");
             }
             if (GUILayout.Button("Import Universal Render Pipeline (URP) Assets"))

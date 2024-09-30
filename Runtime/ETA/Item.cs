@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEngine;
 using ETA_Implementation;
@@ -17,7 +17,7 @@ namespace ETA
         
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
-        public bool customLoad;
+        public bool loadOnStart = true;
         
 
         internal void Awake() // todo change Destroy process
@@ -41,11 +41,7 @@ namespace ETA
 
         private void Start()
         {
-            if (customLoad)
-            {
-                return;
-            }
-            Load();
+            if (loadOnStart) { Load(); }
         }
 
         private void OnDestroy()

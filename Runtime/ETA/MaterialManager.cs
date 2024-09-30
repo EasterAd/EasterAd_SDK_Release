@@ -13,8 +13,9 @@ using UnityEditor;
 [ExecuteInEditMode]
 public class MaterialManager : MonoBehaviour
 {
+#nullable enable
     private Renderer? planeRenderer;
-
+#nullable disable
     void Awake()
     {
         planeRenderer = GetComponent<Renderer>();
@@ -52,7 +53,9 @@ public class MaterialManager : MonoBehaviour
             }
         }
 
+#nullable enable
         Material? material = new Material(Shader.Find("EasterAd/DefaultShader"));
+#nullable disable
         if (material == null)
         {
             Debug.LogError("Material creation fail.");
@@ -71,7 +74,7 @@ public class MaterialManager : MonoBehaviour
         );
 
         ETA.Plane plane = GetComponent<ETA.Plane>();
-        if (plane != null && plane.Client != null) 
+        if (plane != null && plane.Client != null)
         {
             ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
             bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressed;
