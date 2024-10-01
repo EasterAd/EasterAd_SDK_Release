@@ -9,6 +9,11 @@ namespace ETA
     /// </summary>
     public class Plane : Item
     {
+        
+        public override void Load()
+        {
+            FuncCtrl.FuncCall(in _client, "Load");
+        }
 
         /// <summary>  
         /// <para xml:lang="ko"><c>Plane</c>의 생성자입니다.</para>  
@@ -26,6 +31,7 @@ namespace ETA
         /// <para xml:lang="ko">생성된 <c>PlaneClient</c> 객체입니다.</para>  
         /// <para xml:lang="en">The created <c>PlaneClient</c> object.</para>  
         /// </returns>  
+        // ReSharper disable once ParameterHidesMember
         protected override ItemClient GetClient(GameObject clientObject, string adUnitId)
         {
             return new PlaneClient(clientObject, adUnitId);

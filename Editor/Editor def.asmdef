@@ -1,0 +1,20 @@
+{
+    "name": "ETAEditor",
+    "rootNamespace": "",
+    "references": [
+        "ETA"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "ETA_Implementation.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
