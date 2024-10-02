@@ -1,6 +1,6 @@
 {
   "name": "com.autovertise.easterad",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "displayName": "Easter Ad",
   "description": "Intrinsic in-game advertising plugin for Unity",
   "unity": "2022.3",
