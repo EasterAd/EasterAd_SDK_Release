@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using ETA_Dependencies.Unity;
 using UnityEngine;
 using ETA_Implementation;
+using GameObject = UnityEngine.GameObject;
 #pragma warning disable CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
 
 namespace ETA
@@ -31,12 +33,12 @@ namespace ETA
             
             if (EtaSdk.Instance.GetItemClient(adUnitId) != null)
             {
-                DebugLogger.Log("Item already exist: " + adUnitId);
+                InstanceManager.DebugLogger.Log("Item already exist: " + adUnitId);
             }
 
             _client = GetClient(gameObject, adUnitId);
             EtaSdk.Instance.AddItemClient(adUnitId, in _client);
-            DebugLogger.Log("Item added: " + adUnitId);
+            InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
 
         private void Start()

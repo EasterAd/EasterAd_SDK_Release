@@ -34,7 +34,7 @@ namespace ETA
         // ReSharper disable once ParameterHidesMember
         protected override ItemClient GetClient(GameObject clientObject, string adUnitId)
         {
-            return new PlaneClient(clientObject, adUnitId);
+            return new PlaneClient(new ETA_Dependencies.Unity.GameObject(clientObject), adUnitId);
         }
     }
 }

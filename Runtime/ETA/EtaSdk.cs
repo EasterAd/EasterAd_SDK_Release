@@ -6,6 +6,10 @@ using ETA_Implementation;
 using ETA_Implementation.Impression;
 using System;
 using System.IO;
+using ETA_Dependencies;
+using Camera = ETA_Dependencies.Unity.Camera;
+using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
+using GameObject = UnityEngine.GameObject;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,7 +34,7 @@ namespace ETA
         private static EtaSdk? _instance;
         internal static bool OnceInitialized { get; private set; }
 
-        public Camera? targetCamera;
+        public UnityEngine.Camera? targetCamera;
         internal string gameId = "";
         internal string sdkKey = "";
         internal bool logEnable;
@@ -82,9 +86,9 @@ namespace ETA
             }
         }
 
-        public void SetCamera(Camera userCamera)
+        public void SetCamera(UnityEngine.Camera userCamera)
         {
-            CameraManager.SetCamera(userCamera);
+            InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(userCamera.gameObject).Camera);
         }
 
         private EtaSdk()
@@ -120,12 +124,12 @@ namespace ETA
             _etaSdkClient!.LogEnable = logEnable;
             ImpressionCtrl.ImpressionRoutine();
 #if UNITY_EDITOR
-            DebugLogger.updateCurrentGameDisplay();
+            InstanceManager.UI.UpdateCurrentGameDisplay();
 #endif
 
             if (targetCamera != null) return;
 
-            targetCamera = Camera.main;
+            targetCamera = UnityEngine.Camera.main;
             if (targetCamera != null)
             {
                 SetCamera(targetCamera);
@@ -141,13 +145,13 @@ namespace ETA
         void OnDrawGizmos()
         {
             if (!logEnable) { return; }
-            DebugLogger.DrawDebugGizmos();
+            InstanceManager.UI.DrawDebugGizmos();
         }
 
         void OnGUI()
         {
             if (!logEnable) { return; }
-            DebugLogger.DrawDebugGUI();
+            InstanceManager.UI.DrawDebugGUI();
         }
 #endif
 
