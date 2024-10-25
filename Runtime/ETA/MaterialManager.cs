@@ -77,7 +77,7 @@ public class MaterialManager : MonoBehaviour
         if (plane != null && plane.Client != null)
         {
             ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
-            bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressed;
+            bool hideLogo = status is ETA_Implementation.ItemStatus.Loaded or ETA_Implementation.ItemStatus.Impressing or ETA_Implementation.ItemStatus.Impressed;
             data.z = hideLogo ? 0.0f : 1.0f;
         }
 

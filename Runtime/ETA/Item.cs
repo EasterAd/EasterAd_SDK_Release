@@ -20,6 +20,10 @@ namespace ETA
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
         public bool loadOnStart = true;
+        public float refreshTime = 10.0f;
+        
+        private bool _isImpressed;
+        private float _afterImpressedTime;
         
 
         internal void Awake() // todo change Destroy process
@@ -44,6 +48,30 @@ namespace ETA
         private void Start()
         {
             if (loadOnStart) { Load(); }
+        }
+        
+        private void Update()
+        {
+            if(_isImpressed)
+            {
+                _afterImpressedTime += Time.unscaledDeltaTime;
+                if (_afterImpressedTime >= refreshTime && _client.GetStatus() == ItemStatus.Impressed)
+                {
+                    _isImpressed = false;
+                    _afterImpressedTime = 0.0f;
+                    Load();
+                }
+            }
+            else if (_client.GetStatus() == ItemStatus.Impressed)
+            {
+                _isImpressed = true;
+                _afterImpressedTime = 0.0f;
+            }
+            else if (_client.GetStatus() == ItemStatus.Impressing)
+            {
+                _isImpressed = false;
+                _afterImpressedTime = 0.0f;
+            }
         }
 
         private void OnDestroy()
