@@ -136,9 +136,19 @@ namespace ETA
             }
         }
 
+        private void OnDestroy()
+        {
+            OnApplicationQuit();
+        }
+
         private void OnApplicationQuit()
         {
+            // make null all the static variables
+            
+            OnceInitialized = false;
             _etaSdkClient!.OnApplicationQuit();
+            _etaSdkClient = null;
+            _instance = null;
         }
 
 #if UNITY_EDITOR
