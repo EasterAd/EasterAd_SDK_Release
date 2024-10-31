@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using ETA_Dependencies.Unity;
 using UnityEngine;

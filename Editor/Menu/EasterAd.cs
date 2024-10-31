@@ -23,7 +23,7 @@ namespace ETA_Editor.Menu
         private static void ShowWindow()
         {
             //Show existing window instance. If one doesn't exist, make one.
-            EasterAd window = (EasterAd)EditorWindow.GetWindow(typeof(EasterAd));
+            EasterAd window = (EasterAd)GetWindow(typeof(EasterAd));
             window.titleContent = new GUIContent("EasterAd");
             window.minSize = new Vector2(820,350);
             window.Show();

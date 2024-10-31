@@ -6,8 +6,6 @@ using ETA_Implementation;
 using ETA_Implementation.Impression;
 using System;
 using System.IO;
-using ETA_Dependencies;
-using Camera = ETA_Dependencies.Unity.Camera;
 using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
 using GameObject = UnityEngine.GameObject;
 
@@ -34,7 +32,7 @@ namespace ETA
         private static EtaSdk? _instance;
         internal static bool OnceInitialized { get; private set; }
 
-        public UnityEngine.Camera? targetCamera;
+        public Camera? targetCamera;
         internal string gameId = "";
         internal string sdkKey = "";
         internal bool logEnable;
@@ -86,7 +84,7 @@ namespace ETA
             }
         }
 
-        public void SetCamera(UnityEngine.Camera userCamera)
+        public void SetCamera(Camera userCamera)
         {
             InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(userCamera.gameObject).Camera);
         }
@@ -129,13 +127,13 @@ namespace ETA
 
             if (targetCamera != null) return;
 
-            targetCamera = UnityEngine.Camera.main;
+            targetCamera = Camera.main;
             if (targetCamera != null)
             {
                 SetCamera(targetCamera);
             }
         }
-
+        
         private void OnDestroy()
         {
             OnApplicationQuit();
@@ -146,7 +144,7 @@ namespace ETA
             // make null all the static variables
             
             OnceInitialized = false;
-            _etaSdkClient!.OnApplicationQuit();
+            _etaSdkClient?.OnApplicationQuit();
             _etaSdkClient = null;
             _instance = null;
         }
