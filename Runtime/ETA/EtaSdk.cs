@@ -6,6 +6,8 @@ using ETA_Implementation;
 using ETA_Implementation.Impression;
 using System;
 using System.IO;
+using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
+using GameObject = UnityEngine.GameObject;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -68,6 +70,7 @@ namespace ETA
                 if (_instance == null)
                 {
                     _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
+                    _instance._etaSdkClient ??= EtaSdkClient.CreateClient(_instance);
                 }
             }
         }
@@ -84,7 +87,7 @@ namespace ETA
 
         public void SetCamera(Camera userCamera)
         {
-            CameraManager.SetCamera(userCamera);
+            InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(userCamera.gameObject).Camera);
         }
 
         private EtaSdk()
@@ -120,7 +123,7 @@ namespace ETA
             _etaSdkClient!.LogEnable = logEnable;
             ImpressionCtrl.ImpressionRoutine();
 #if UNITY_EDITOR
-            DebugLogger.updateCurrentGameDisplay();
+            InstanceManager.UI.UpdateCurrentGameDisplay();
 #endif
 
             if (targetCamera != null) return;
@@ -131,23 +134,33 @@ namespace ETA
                 SetCamera(targetCamera);
             }
         }
+        
+        private void OnDestroy()
+        {
+            OnApplicationQuit();
+        }
 
         private void OnApplicationQuit()
         {
-            _etaSdkClient!.OnApplicationQuit();
+            // make null all the static variables
+            
+            OnceInitialized = false;
+            _etaSdkClient?.OnApplicationQuit();
+            _etaSdkClient = null;
+            _instance = null;
         }
 
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
             if (!logEnable) { return; }
-            DebugLogger.DrawDebugGizmos();
+            InstanceManager.UI.DrawDebugGizmos();
         }
 
         void OnGUI()
         {
             if (!logEnable) { return; }
-            DebugLogger.DrawDebugGUI();
+            InstanceManager.UI.DrawDebugGUI();
         }
 #endif
 

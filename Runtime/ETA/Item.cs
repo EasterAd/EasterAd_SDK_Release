@@ -1,7 +1,8 @@
-using System;
 using System.IO;
+using ETA_Dependencies.Unity;
 using UnityEngine;
 using ETA_Implementation;
+using GameObject = UnityEngine.GameObject;
 #pragma warning disable CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
 
 namespace ETA
@@ -18,6 +19,10 @@ namespace ETA
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
         public bool loadOnStart = true;
+        public float refreshTime = 10.0f;
+        
+        private bool _isImpressed;
+        private float _afterImpressedTime;
         
 
         internal void Awake() // todo change Destroy process
@@ -31,17 +36,41 @@ namespace ETA
             
             if (EtaSdk.Instance.GetItemClient(adUnitId) != null)
             {
-                DebugLogger.Log("Item already exist: " + adUnitId);
+                InstanceManager.DebugLogger.Log("Item already exist: " + adUnitId);
             }
 
             _client = GetClient(gameObject, adUnitId);
             EtaSdk.Instance.AddItemClient(adUnitId, in _client);
-            DebugLogger.Log("Item added: " + adUnitId);
+            InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
 
         private void Start()
         {
             if (loadOnStart) { Load(); }
+        }
+        
+        private void Update()
+        {
+            if(_isImpressed)
+            {
+                _afterImpressedTime += Time.unscaledDeltaTime;
+                if (_afterImpressedTime >= refreshTime && _client.GetStatus() == ItemStatus.Impressed)
+                {
+                    _isImpressed = false;
+                    _afterImpressedTime = 0.0f;
+                    Load();
+                }
+            }
+            else if (_client.GetStatus() == ItemStatus.Impressed)
+            {
+                _isImpressed = true;
+                _afterImpressedTime = 0.0f;
+            }
+            else if (_client.GetStatus() == ItemStatus.Impressing)
+            {
+                _isImpressed = false;
+                _afterImpressedTime = 0.0f;
+            }
         }
 
         private void OnDestroy()
