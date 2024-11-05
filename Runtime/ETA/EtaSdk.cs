@@ -70,6 +70,7 @@ namespace ETA
                 if (_instance == null)
                 {
                     _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
+                    _instance._etaSdkClient ??= EtaSdkClient.CreateClient(_instance);
                 }
             }
         }

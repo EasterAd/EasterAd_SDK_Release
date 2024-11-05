@@ -2,10 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.0] - 2024.10.31
+## [1.1.0] - 2024.11.05
 
 ### Changed
 - C# 8.0 Support
+- NetStandard 2.0 support
 - Updated the SDK to support Unity 2020.2
 
 ### Removed
