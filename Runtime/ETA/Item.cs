@@ -40,7 +40,7 @@ namespace ETA
             }
 
             _client = GetClient(gameObject, adUnitId);
-            EtaSdk.Instance.AddItemClient(adUnitId, in _client);
+            EtaSdk.Instance.AddItemClient(adUnitId, ref _client);
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
 

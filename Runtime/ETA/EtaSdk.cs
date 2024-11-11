@@ -13,7 +13,6 @@ using GameObject = UnityEngine.GameObject;
 using UnityEditor;
 #endif
 
-#pragma warning disable CS1591 // TODO: 배포전 삭제
 
 namespace ETA
 {
@@ -227,14 +226,14 @@ namespace ETA
             return _etaSdkClient!.GetItemClient();
         }
         
-        public void AddItemClient(string key, in ItemClient itemClient)
+        public void AddItemClient(string key, ref ItemClient itemClient)
         {
-            _etaSdkClient!.AddItemClient(key, itemClient);
+            _etaSdkClient!.AddItemClient(key, ref itemClient);
         }
         
-        public void UpdateItemClient(string key, in ItemClient itemClient)
+        public void UpdateItemClient(string key, ref ItemClient itemClient)
         {
-            _etaSdkClient!.UpdateItemClient(key, itemClient);
+            _etaSdkClient!.UpdateItemClient(key, ref itemClient);
         }
         
         public void RemoveItemClient(string key)
