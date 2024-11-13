@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2024.11.13
+
+### Changed
+
+- Fixed scale issue with the Plane Item prefab when it has a parent object.
+- Fixed the color of the gizmo when a valid impression occurs.
+
 ## [1.1.1] - 2024.11.05
 
 ### Changed
