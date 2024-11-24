@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2024.11.24
+
+### Added
+
+- If Item`s request is fail, default Material will be used.
+- If Load is fail, retry 3 times with 5 seconds delay.
+
 ## [1.1.2] - 2024.11.13
 
 ### Changed

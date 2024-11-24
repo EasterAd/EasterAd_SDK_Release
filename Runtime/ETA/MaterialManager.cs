@@ -1,4 +1,8 @@
+#nullable enable
+using System;
+using System.ComponentModel;
 using UnityEngine;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -15,9 +19,9 @@ namespace ETA
     [ExecuteInEditMode]
     public class MaterialManager : MonoBehaviour
     {
-#nullable enable
+        public Material? defaultMaterial;
+        public Shader? defaultShader;
         private Renderer? planeRenderer;
-#nullable disable
         void Awake()
         {
             planeRenderer = GetComponent<Renderer>();
@@ -55,9 +59,22 @@ namespace ETA
                 }
             }
 
-#nullable enable
-            Material? material = new Material(Shader.Find("EasterAd/DefaultShader"));
-#nullable disable
+            // Material material = defaultMaterial ? new Material(defaultMaterial) : new Material(defaultShader ? defaultShader : Shader.Find("EasterAd/DefaultShader"));
+
+            Material material;
+            
+            if (defaultMaterial != null)
+            {
+                material = new Material(defaultMaterial)
+                {
+                    shader = defaultShader ? defaultShader : null
+                };
+            }
+            else
+            {
+                material = new Material(Shader.Find("EasterAd/DefaultShader"));
+            }
+            
             if (material == null)
             {
                 Debug.LogError("Material creation fail.");
@@ -76,7 +93,7 @@ namespace ETA
             );
 
             Plane plane = GetComponent<Plane>();
-            if (plane != null && plane.Client != null)
+            if (plane != null)
             {
                 ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
                 bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressing || status == ETA_Implementation.ItemStatus.Impressed;
