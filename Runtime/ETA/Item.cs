@@ -1,3 +1,4 @@
+#nullable enable
 using System.IO;
 using ETA_Dependencies.Unity;
 using UnityEngine;
@@ -13,8 +14,11 @@ namespace ETA
     /// </summary>
     public abstract class Item : MonoBehaviour
     {
-        protected ItemClient _client = null!;
-        public ItemClient Client => _client;
+        protected ItemClient? _client;
+        public ItemClient Client {
+            get => _client ??= EtaSdk.Instance.GetItemClient(adUnitId) ?? GetClient(gameObject, adUnitId);
+            set => _client = value;
+        }
         
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
@@ -54,19 +58,19 @@ namespace ETA
             if(_isImpressed)
             {
                 _afterImpressedTime += Time.unscaledDeltaTime;
-                if (_afterImpressedTime >= refreshTime && _client.GetStatus() == ItemStatus.Impressed)
+                if (_afterImpressedTime >= refreshTime && Client.GetStatus() == ItemStatus.Impressed)
                 {
                     _isImpressed = false;
                     _afterImpressedTime = 0.0f;
                     Load();
                 }
             }
-            else if (_client.GetStatus() == ItemStatus.Impressed)
+            else if (Client.GetStatus() == ItemStatus.Impressed)
             {
                 _isImpressed = true;
                 _afterImpressedTime = 0.0f;
             }
-            else if (_client.GetStatus() == ItemStatus.Impressing)
+            else if (Client.GetStatus() == ItemStatus.Impressing)
             {
                 _isImpressed = false;
                 _afterImpressedTime = 0.0f;

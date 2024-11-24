@@ -116,6 +116,8 @@ namespace ETA
                 ItemAwakeQueue.Dequeue().Awake();
             }
         }
+        
+        private float _time;
 
         void Update()
         {
@@ -125,12 +127,20 @@ namespace ETA
             InstanceManager.UI.UpdateCurrentGameDisplay();
 #endif
 
-            if (targetCamera != null) return;
-
-            targetCamera = Camera.main;
-            if (targetCamera != null)
+            if (targetCamera == null)
             {
-                SetCamera(targetCamera);
+                targetCamera = Camera.main;
+                if (targetCamera != null)
+                {
+                    SetCamera(targetCamera);
+                }
+            }
+            
+            _time += Time.deltaTime;
+            if (_time > 5)
+            {
+                _time = 0;
+                FuncCtrl.FailFuncCall();
             }
         }
         
