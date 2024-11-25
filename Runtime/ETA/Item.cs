@@ -14,11 +14,8 @@ namespace ETA
     /// </summary>
     public abstract class Item : MonoBehaviour
     {
-        protected ItemClient? _client;
-        public ItemClient Client {
-            get => _client ??= EtaSdk.Instance.GetItemClient(adUnitId) ?? GetClient(gameObject, adUnitId);
-            set => _client = value;
-        }
+        protected ItemClient _client = null!;
+        public ItemClient Client => _client;
         
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
