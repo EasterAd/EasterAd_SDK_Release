@@ -93,7 +93,7 @@ namespace ETA
             );
 
             Plane plane = GetComponent<Plane>();
-            if (plane != null)
+            if (plane != null && plane.Client != null)
             {
                 ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
                 bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressing || status == ETA_Implementation.ItemStatus.Impressed;
