@@ -40,11 +40,11 @@ namespace ETA
         }
 
 #if UNITY_EDITOR
-    void OnValidate()
-    {
-        ApplyMaterial();
-        SetConstantData();
-    }
+        void OnValidate()
+        {
+            ApplyMaterial();
+            SetConstantData();
+        }
 #endif
 
         void ApplyMaterial()
