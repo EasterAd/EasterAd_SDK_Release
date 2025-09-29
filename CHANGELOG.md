@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2025.09.30
+
+### Changed
+
+- Updated the SDK to support Unity 6000
+
 ## [1.1.3] - 2024.11.24
 
 ### Added
@@ -56,5 +62,3 @@ This is the first version of the changelog.
 ### Removed
 
 - Nothing. It's the first release, nothing to remove.
-
-[Unreleased]: https://github.com/Autovertise/EasterAd_SDK/pull/44

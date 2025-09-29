@@ -131,15 +131,15 @@ namespace ETA_Editor.Menu
             GUILayout.Label("Import Ad Assets", EditorStyles.boldLabel);
             if (GUILayout.Button("Import Built-in Render Pipeline Assets"))
             {
-                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_BuiltIn.unitypackage");
+                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_BuiltIn.unitypackage");
             }
             if (GUILayout.Button("Import Universal Render Pipeline (URP) Assets"))
             {
-                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_URP.unitypackage");
+                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_URP.unitypackage");
             }
             if (GUILayout.Button("Import High Definition Render Pipeline (HDRP) Assets"))
             {
-                ImportPackage("Packages/com.autovertise.easterad/Packages/EasterAd_HDRP.unitypackage");
+                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_HDRP.unitypackage");
             }
 
             // if (!Application.isPlaying)
