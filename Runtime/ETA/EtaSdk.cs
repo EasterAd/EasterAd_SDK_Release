@@ -29,12 +29,22 @@ namespace ETA
         private static readonly ImpressionCtrl ImpressionCtrl = new ImpressionCtrl();
         private EtaSdkClient? _etaSdkClient;
         private static EtaSdk? _instance;
-        internal static bool OnceInitialized { get; private set; }
+        public static bool OnceInitialized { get; private set; }
 
+        private static string configFilePath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
+        /// <summary>
+        /// <para xml:lang="ko">SDK가 사용할 대상 카메라입니다. 설정되지 않은 경우 자동으로 <c>Camera.main</c>을 시도합니다.</para>
+        /// <para xml:lang="en">The target camera used by the SDK. If not set, it will try to use <c>Camera.main</c> automatically.</para>
+        /// </summary>
         public Camera? targetCamera;
         internal string gameId = "";
         internal string sdkKey = "";
         internal bool logEnable;
+        
+        internal bool customInfoEnabled = false;
+        internal int customDeviceType = -1;
+        internal string customPlatform = "";
+        internal string customLanguage = "";
         
         internal static readonly Queue<Item> ItemAwakeQueue = new Queue<Item>();
         
@@ -48,7 +58,7 @@ namespace ETA
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<EtaSdk>();
+                    _instance = FindFirstObjectByType<EtaSdk>();
                     if (_instance == null)
                     {
                         throw new Exception("EtaSdk is not Enabled, Please Remove EasterAd Script or Enable EtaSdk at Window -> EasterAd");
@@ -61,11 +71,15 @@ namespace ETA
             }
         }
         
+        /// <summary>
+        /// <para xml:lang="ko"><c>EtaSdk</c> 인스턴스를 생성합니다. 이미 인스턴스가 존재하면 아무 작업도 수행하지 않습니다.</para>
+        /// <para xml:lang="en">Creates an instance of <c>EtaSdk</c>. If an instance already exists, no action is taken.</para>
+        /// </summary>
         public static void CreateEtaSdk()
         {
             if(_instance == null)
             {
-                _instance = FindObjectOfType<EtaSdk>();
+                _instance = FindFirstObjectByType<EtaSdk>();
                 if (_instance == null)
                 {
                     _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
@@ -75,30 +89,59 @@ namespace ETA
         }
 
         
+        /// <summary>
+        /// <para xml:lang="ko">씬에서 <c>EtaSdk</c> 게임 오브젝트를 즉시 제거합니다.</para>
+        /// <para xml:lang="en">Immediately destroys the <c>EtaSdk</c> game object from the scene.</para>
+        /// </summary>
         public static void DestroyCall()
         {
-            if(_instance == null) _instance = FindObjectOfType<EtaSdk>();
+            if(_instance == null) _instance = FindFirstObjectByType<EtaSdk>();
             if (_instance != null && _instance.gameObject != null)
             {
                 DestroyImmediate(_instance.gameObject);
             }
         }
 
+        /// <summary>
+        /// <para xml:lang="ko">사용자 카메라를 설정합니다. 설정된 카메라는 광고 노출 계산에 사용됩니다.</para>
+        /// <para xml:lang="en">Sets the user camera. The set camera is used for ad impression calculation.</para>
+        /// </summary>
+        /// <param name="userCamera">
+        /// <para xml:lang="ko">SDK가 사용할 Unity 카메라 인스턴스.</para>
+        /// <para xml:lang="en">The Unity camera instance to be used by the SDK.</para>
+        /// </param>
         public void SetCamera(Camera userCamera)
         {
             InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(userCamera.gameObject).Camera);
         }
-
-        private EtaSdk()
+        
+        private void RefreshConfig()
         {
-            string filename = "ETA_Config.txt";
-            string filepath = Path.Combine(Application.streamingAssetsPath, filename);
-            if (File.Exists(filepath) == false) { return; }
+            if (!File.Exists(configFilePath)) { return; }
+            string[] config = File.ReadAllLines(configFilePath);
             
-            string[] config = File.ReadAllLines(filepath);
             gameId = config[1];
             sdkKey = config[2];
             logEnable = bool.Parse(config[3]);
+            if (bool.Parse(config[4]))
+            {
+                customInfoEnabled = true;
+                customDeviceType = DeviceTypeCode((DeviceType)Enum.Parse(typeof(DeviceType), config[5]));
+                customPlatform = PlatformCode((RuntimePlatform)Enum.Parse(typeof(RuntimePlatform), config[6]));
+                customLanguage = LanguageCode((SystemLanguage)Enum.Parse(typeof(SystemLanguage), config[7]));
+            }
+            else
+            {
+                customInfoEnabled = false;
+                customDeviceType = -1;
+                customPlatform = "";
+                customLanguage = "";
+            }
+        }
+
+        private EtaSdk()
+        {
+            RefreshConfig();
         }
         
         private void Awake()
@@ -184,10 +227,20 @@ namespace ETA
                 Debug.Log("EtaSdk is already initialized");
                 return;
             }
-            _etaSdkClient!.Initialize(gameId, logEnable, sdkKey);
+            if (customInfoEnabled) 
+                _etaSdkClient!.Initialize(gameId, logEnable, sdkKey, customDeviceType, customPlatform, customLanguage);
+            else
+                _etaSdkClient!.Initialize(gameId, logEnable, sdkKey);
             if (targetCamera!=null) { SetCamera(targetCamera); }
             _etaSdkClient.AxesNames = GetAxesNames();
             OnceInitialized = true;
+        }
+        public void ReInitialize()
+        {
+            RefreshConfig();
+            
+            if (customInfoEnabled) _etaSdkClient!.ReInitialize(logEnable, customDeviceType, customPlatform, customLanguage);
+            else _etaSdkClient!.ReInitialize(logEnable);
         }
 
         /// <summary>
@@ -236,16 +289,48 @@ namespace ETA
             return _etaSdkClient!.GetItemClient();
         }
         
+        /// <summary>
+        /// <para xml:lang="ko">지정된 키로 <c>ItemClient</c>를 등록하거나 교체합니다.</para>
+        /// <para xml:lang="en">Adds or replaces an <c>ItemClient</c> with the specified key.</para>
+        /// </summary>
+        /// <param name="key">
+        /// <para xml:lang="ko"><c>ItemClient</c>를 식별할 키.</para>
+        /// <para xml:lang="en">The key used to identify the <c>ItemClient</c>.</para>
+        /// </param>
+        /// <param name="itemClient">
+        /// <para xml:lang="ko">등록할 <c>ItemClient</c> 참조.</para>
+        /// <para xml:lang="en">Reference to the <c>ItemClient</c> to add.</para>
+        /// </param>
         public void AddItemClient(string key, ref ItemClient itemClient)
         {
             _etaSdkClient!.AddItemClient(key, ref itemClient);
         }
         
+        /// <summary>
+        /// <para xml:lang="ko">지정된 키의 <c>ItemClient</c> 값을 갱신합니다.</para>
+        /// <para xml:lang="en">Updates the <c>ItemClient</c> associated with the specified key.</para>
+        /// </summary>
+        /// <param name="key">
+        /// <para xml:lang="ko">갱신할 대상의 키.</para>
+        /// <para xml:lang="en">The key of the entry to update.</para>
+        /// </param>
+        /// <param name="itemClient">
+        /// <para xml:lang="ko">새 <c>ItemClient</c> 참조.</para>
+        /// <para xml:lang="en">The new <c>ItemClient</c> reference.</para>
+        /// </param>
         public void UpdateItemClient(string key, ref ItemClient itemClient)
         {
             _etaSdkClient!.UpdateItemClient(key, ref itemClient);
         }
         
+        /// <summary>
+        /// <para xml:lang="ko">지정된 키의 <c>ItemClient</c>를 제거합니다.</para>
+        /// <para xml:lang="en">Removes the <c>ItemClient</c> associated with the specified key.</para>
+        /// </summary>
+        /// <param name="key">
+        /// <para xml:lang="ko">제거할 대상의 키.</para>
+        /// <para xml:lang="en">The key of the entry to remove.</para>
+        /// </param>
         public void RemoveItemClient(string key)
         {
             _etaSdkClient!.RemoveItemClient(key);
@@ -278,5 +363,81 @@ namespace ETA
             return axesNames;
 #endif
         }
+        
+        private static string LanguageCode(SystemLanguage language)
+        {
+            return language switch
+            {
+                SystemLanguage.Afrikaans => "af",
+                SystemLanguage.Arabic => "ar",
+                SystemLanguage.Basque => "eu",
+                SystemLanguage.Belarusian => "be",
+                SystemLanguage.Bulgarian => "bg",
+                SystemLanguage.Catalan => "ca",
+                SystemLanguage.Chinese => "zh",
+                SystemLanguage.Czech => "cs",
+                SystemLanguage.Danish => "da",
+                SystemLanguage.Dutch => "nl",
+                SystemLanguage.English => "en",
+                SystemLanguage.Estonian => "et",
+                SystemLanguage.Faroese => "fo",
+                SystemLanguage.Finnish => "fi",
+                SystemLanguage.French => "fr",
+                SystemLanguage.German => "de",
+                SystemLanguage.Greek => "el",
+                SystemLanguage.Hebrew => "he",
+                SystemLanguage.Hungarian => "hu",
+                SystemLanguage.Icelandic => "is",
+                SystemLanguage.Indonesian => "id",
+                SystemLanguage.Italian => "it",
+                SystemLanguage.Japanese => "ja",
+                SystemLanguage.Korean => "ko",
+                SystemLanguage.Latvian => "lv",
+                SystemLanguage.Lithuanian => "lt",
+                SystemLanguage.Norwegian => "no",
+                SystemLanguage.Polish => "pl",
+                SystemLanguage.Portuguese => "pt",
+                SystemLanguage.Romanian => "ro",
+                SystemLanguage.Russian => "ru",
+                SystemLanguage.SerboCroatian => "sh",
+                SystemLanguage.Slovak => "sk",
+                SystemLanguage.Slovenian => "sl",
+                SystemLanguage.Spanish => "es",
+                SystemLanguage.Swedish => "sv",
+                SystemLanguage.Thai => "th",
+                SystemLanguage.Turkish => "tr",
+                SystemLanguage.Ukrainian => "uk",
+                SystemLanguage.Vietnamese => "vi",
+                SystemLanguage.ChineseSimplified => "zh",
+                SystemLanguage.ChineseTraditional => "zh",
+                _ => "en"
+            };
+        }
+        
+        private static string PlatformCode(RuntimePlatform platform)
+        {
+            return platform switch
+            {
+                RuntimePlatform.WindowsPlayer => "Windows",
+                RuntimePlatform.WindowsEditor => "WindowsEditor",
+                RuntimePlatform.LinuxEditor => "LinuxEditor",
+                RuntimePlatform.OSXEditor => "OSXEditor",
+                RuntimePlatform.Android => "Android",
+                RuntimePlatform.IPhonePlayer => "iOS",
+                _ => Application.platform.ToString()
+            };
+        }
+        
+        private static int DeviceTypeCode(DeviceType deviceType)
+        {
+            return deviceType switch
+            {
+                DeviceType.Desktop => 2,
+                DeviceType.Handheld => 1,
+                DeviceType.Console => 6,
+                _ => 1
+            };
+        }
+
     }
 }

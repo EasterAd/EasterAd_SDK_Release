@@ -1,8 +1,6 @@
+// ReSharper disable once RedundantNullableDirective
 #nullable enable
-using System;
-using System.ComponentModel;
 using UnityEngine;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -19,7 +17,15 @@ namespace ETA
     [ExecuteInEditMode]
     public class MaterialManager : MonoBehaviour
     {
+        /// <summary>
+        /// <para xml:lang="ko">프리팹에 적용할 기본 머터리얼입니다.</para>
+        /// <para xml:lang="en">The default material applied to the prefab.</para>
+        /// </summary>
         public Material? defaultMaterial;
+        /// <summary>
+        /// <para xml:lang="ko">기본 셰이더입니다. 설정 시 기본 머터리얼의 셰이더를 이 값으로 교체합니다.</para>
+        /// <para xml:lang="en">The default shader. When set, it overrides the shader of the default material.</para>
+        /// </summary>
         public Shader? defaultShader;
         private Renderer? planeRenderer;
         void Awake()
@@ -72,6 +78,7 @@ namespace ETA
             }
             else
             {
+                // ReSharper disable ShaderLabShaderReferenceNotResolved
                 material = new Material(Shader.Find("EasterAd/DefaultShader"));
             }
             
@@ -93,7 +100,8 @@ namespace ETA
             );
 
             Plane plane = GetComponent<Plane>();
-            if (plane != null && plane.Client != null)
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (plane != null && plane.Client != null) // 경고 무시하고 plane.Client != null 검사해야 함
             {
                 ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
                 bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressing || status == ETA_Implementation.ItemStatus.Impressed;

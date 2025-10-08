@@ -15,6 +15,21 @@ namespace ETA_Editor.Menu
         private string _tempGameId = "";
         private string _tempSdkKey = "";
         private bool _tempLogEnable;
+
+        private bool _customInfoEnable;
+        private DeviceType _customDeviceType;
+        private RuntimePlatform _customPlatform;
+        private SystemLanguage _customLanguage;
+
+        private bool _currentEasterAdEnabled;
+        private string _currentGameId;
+        private string _currentSdkKey;
+        private bool _currentLogEnable;
+
+        private string _currentcustomInfoEnable;
+        private DeviceType _currentcustomDeviceType;
+        private RuntimePlatform _currentcustomPlatform;
+        private SystemLanguage _currentcustomLanguage;
         
         private Vector2 _scrollPosition=Vector2.zero;
     
@@ -40,45 +55,75 @@ namespace ETA_Editor.Menu
             _tempGameId = config[1];
             _tempSdkKey = config[2];
             _tempLogEnable = bool.Parse(config[3]);
+
+            _customInfoEnable = bool.Parse(config[4]);
+            if (_customInfoEnable)
+            {
+                _customDeviceType = (DeviceType)System.Enum.Parse(typeof(DeviceType), config[5]);
+                _customPlatform = (RuntimePlatform)System.Enum.Parse(typeof(RuntimePlatform), config[6]);
+                _customLanguage = (SystemLanguage)System.Enum.Parse(typeof(SystemLanguage), config[7]);
+            }
+
+            _currentEasterAdEnabled = _easterAdEnabled;
+            _currentGameId = _tempGameId;
+            _currentSdkKey = _tempSdkKey;
+            _currentLogEnable = _tempLogEnable;
+            _currentcustomInfoEnable = _customInfoEnable.ToString();
+            _currentcustomDeviceType = _customDeviceType;
+            _currentcustomPlatform = _customPlatform;
+            _currentcustomLanguage = _customLanguage;
         }
 
         private void OnGUI()
         {
             GUILayout.Label ("Base Settings", EditorStyles.boldLabel);
             _easterAdEnabled = EditorGUILayout.BeginToggleGroup ("Enable EasterAd SDK", _easterAdEnabled);
+
+            EditorGUILayout.BeginHorizontal();
             _tempGameId = EditorGUILayout.TextField("Game ID", _tempGameId);
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField(_currentGameId);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
             _tempSdkKey = EditorGUILayout.TextField("SDK Key", _tempSdkKey);
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField(_currentSdkKey);
+            EditorGUILayout.EndHorizontal();
+
+            _customInfoEnable = EditorGUILayout.BeginToggleGroup ("Custom Info", _customInfoEnable);
+
+            EditorGUILayout.BeginHorizontal();
+            _customDeviceType = (DeviceType)EditorGUILayout.EnumPopup("Device Type", _customDeviceType);
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField(_currentcustomDeviceType.ToString());
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _customPlatform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _customPlatform);
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField(_currentcustomPlatform.ToString());
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _customLanguage = (SystemLanguage)EditorGUILayout.EnumPopup("Language", _customLanguage);
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField(_currentcustomLanguage.ToString());
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndToggleGroup ();
+
             _tempLogEnable = EditorGUILayout.Toggle("Enable Log", _tempLogEnable);
             if (GUILayout.Button("Save"))
             {
-                if (_tempGameId == "")
+                SaveSettings();
+            }
+
+            if (EtaSdk.OnceInitialized)
+            {
+                if (GUILayout.Button("Re-Initialize SDK"))
                 {
-                    try
-                    {
-                        EtaSdk.DestroyCall();
-                    }
-                    finally
-                    {
-                        Debug.LogError("Game ID is required");
-                    }
-                }
-                else
-                {
-                    StringBuilder config = new StringBuilder();
-                    config.AppendLine(_easterAdEnabled.ToString());
-                    config.AppendLine(_tempGameId);
-                    config.AppendLine(_tempSdkKey);
-                    config.AppendLine(_tempLogEnable.ToString());
-                    AssetDatabase.Refresh();
-            
-                    if (Directory.Exists(Application.streamingAssetsPath) == false)
-                    {
-                        Directory.CreateDirectory(Application.streamingAssetsPath);
-                    }
-            
-                    string filepath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
-                    File.WriteAllText(filepath, config.ToString());
-                    AssetDatabase.Refresh();
+                    EtaSdk.Instance.ReInitialize();
                 }
             }
 
@@ -99,7 +144,7 @@ namespace ETA_Editor.Menu
             
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(820), GUILayout.Height(200));
             int index = 1;
-            foreach (Item item in FindObjectsOfType<Item>())
+            foreach (Item item in FindObjectsByType<Item>(FindObjectsSortMode.InstanceID))
             {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField(index.ToString(), GUILayout.Width(50));
@@ -160,5 +205,53 @@ namespace ETA_Editor.Menu
             }
         }
 
+        private void SaveSettings()
+        {
+            if (_tempGameId == "")
+            {
+                try
+                {
+                    EtaSdk.DestroyCall();
+                }
+                finally
+                {
+                    Debug.LogError("Game ID is required");
+                }
+            }
+            else
+            {
+                StringBuilder config = new StringBuilder();
+                config.AppendLine(_easterAdEnabled.ToString());
+                config.AppendLine(_tempGameId);
+                config.AppendLine(_tempSdkKey);
+                config.AppendLine(_tempLogEnable.ToString());
+                config.AppendLine(_customInfoEnable.ToString());
+                if (_customInfoEnable)
+                {
+                    config.AppendLine(_customDeviceType.ToString());
+                    config.AppendLine(_customPlatform.ToString());
+                    config.AppendLine(_customLanguage.ToString());
+                }
+                AssetDatabase.Refresh();
+
+                if (Directory.Exists(Application.streamingAssetsPath) == false)
+                {
+                    Directory.CreateDirectory(Application.streamingAssetsPath);
+                }
+
+                string filepath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
+                File.WriteAllText(filepath, config.ToString());
+                AssetDatabase.Refresh();
+
+                _currentEasterAdEnabled = _easterAdEnabled;
+                _currentGameId = _tempGameId;
+                _currentSdkKey = _tempSdkKey;
+                _currentLogEnable = _tempLogEnable;
+                _currentcustomInfoEnable = _customInfoEnable.ToString();
+                _currentcustomDeviceType = _customDeviceType;
+                _currentcustomPlatform = _customPlatform;
+                _currentcustomLanguage = _customLanguage;
+            }
+        }
     }
 }
