@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using ETA;
 using UnityEditor;
 using UnityEngine;
@@ -21,12 +22,9 @@ namespace ETA_Editor.Menu
         private RuntimePlatform _customPlatform;
         private SystemLanguage _customLanguage;
 
-        private bool _currentEasterAdEnabled;
-        private string _currentGameId;
-        private string _currentSdkKey;
-        private bool _currentLogEnable;
+        private string _currentGameId = "";
+        private string _currentSdkKey = "";
 
-        private string _currentcustomInfoEnable;
         private DeviceType _currentcustomDeviceType;
         private RuntimePlatform _currentcustomPlatform;
         private SystemLanguage _currentcustomLanguage;
@@ -51,24 +49,21 @@ namespace ETA_Editor.Menu
             if (File.Exists(filepath) == false) { return; }
             
             string[] config = File.ReadAllLines(filepath);
-            _easterAdEnabled = bool.Parse(config[0]);
+            _easterAdEnabled = Boolean.Parse(config[0]);
             _tempGameId = config[1];
             _tempSdkKey = config[2];
-            _tempLogEnable = bool.Parse(config[3]);
+            _tempLogEnable = Boolean.Parse(config[3]);
 
-            _customInfoEnable = bool.Parse(config[4]);
+            _customInfoEnable = Boolean.Parse(config[4]);
             if (_customInfoEnable)
             {
-                _customDeviceType = (DeviceType)System.Enum.Parse(typeof(DeviceType), config[5]);
-                _customPlatform = (RuntimePlatform)System.Enum.Parse(typeof(RuntimePlatform), config[6]);
-                _customLanguage = (SystemLanguage)System.Enum.Parse(typeof(SystemLanguage), config[7]);
+                _customDeviceType = (DeviceType)Enum.Parse(typeof(DeviceType), config[5]);
+                _customPlatform = (RuntimePlatform)Enum.Parse(typeof(RuntimePlatform), config[6]);
+                _customLanguage = (SystemLanguage)Enum.Parse(typeof(SystemLanguage), config[7]);
             }
 
-            _currentEasterAdEnabled = _easterAdEnabled;
             _currentGameId = _tempGameId;
             _currentSdkKey = _tempSdkKey;
-            _currentLogEnable = _tempLogEnable;
-            _currentcustomInfoEnable = _customInfoEnable.ToString();
             _currentcustomDeviceType = _customDeviceType;
             _currentcustomPlatform = _customPlatform;
             _currentcustomLanguage = _customLanguage;
@@ -119,11 +114,11 @@ namespace ETA_Editor.Menu
                 SaveSettings();
             }
 
-            if (EtaSdk.OnceInitialized)
+            if (EasterAdSdk.OnceInitialized)
             {
                 if (GUILayout.Button("Re-Initialize SDK"))
                 {
-                    EtaSdk.Instance.ReInitialize();
+                    EasterAdSdk.Instance.ReInitialize();
                 }
             }
 
@@ -211,7 +206,7 @@ namespace ETA_Editor.Menu
             {
                 try
                 {
-                    EtaSdk.DestroyCall();
+                    EasterAdSdk.DestroyCall();
                 }
                 finally
                 {
@@ -243,11 +238,8 @@ namespace ETA_Editor.Menu
                 File.WriteAllText(filepath, config.ToString());
                 AssetDatabase.Refresh();
 
-                _currentEasterAdEnabled = _easterAdEnabled;
                 _currentGameId = _tempGameId;
                 _currentSdkKey = _tempSdkKey;
-                _currentLogEnable = _tempLogEnable;
-                _currentcustomInfoEnable = _customInfoEnable.ToString();
                 _currentcustomDeviceType = _customDeviceType;
                 _currentcustomPlatform = _customPlatform;
                 _currentcustomLanguage = _customLanguage;

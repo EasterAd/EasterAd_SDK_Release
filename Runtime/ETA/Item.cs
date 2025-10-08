@@ -27,20 +27,20 @@ namespace ETA
 
         internal void Awake() // todo change Destroy process
         {
-            if(EtaSdk.OnceInitialized == false)
+            if(EasterAdSdk.OnceInitialized == false)
             {
-                EtaSdk.ItemAwakeQueue.Enqueue(this);
+                EasterAdSdk.ItemAwakeQueue.Enqueue(this);
                 EnableSDK();
                 return;
             }
             
-            if (EtaSdk.Instance.GetItemClient(adUnitId) != null)
+            if (EasterAdSdk.Instance.GetItemClient(adUnitId) != null)
             {
                 InstanceManager.DebugLogger.Log("Item already exist: " + adUnitId);
             }
 
             _client = GetClient(gameObject, adUnitId);
-            EtaSdk.Instance.AddItemClient(adUnitId, ref _client);
+            EasterAdSdk.Instance.AddItemClient(adUnitId, ref _client);
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
 
@@ -76,7 +76,7 @@ namespace ETA
         private void OnDestroy()
         {
             try{
-                EtaSdk.Instance.RemoveItemClient(adUnitId);
+                EasterAdSdk.Instance.RemoveItemClient(adUnitId);
             }
             catch
             {
@@ -148,7 +148,7 @@ namespace ETA
             
             if (easterAdEnabled)
             {
-                EtaSdk.CreateEtaSdk();
+                EasterAdSdk.CreateEtaSdk();
             }
         }
     }

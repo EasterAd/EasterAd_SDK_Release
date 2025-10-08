@@ -6,6 +6,7 @@ using ETA_Implementation;
 using ETA_Implementation.Impression;
 using System;
 using System.IO;
+using ETA_Implementation.Library;
 using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
 using GameObject = UnityEngine.GameObject;
 
@@ -24,11 +25,14 @@ namespace ETA
     /// <para xml:lang="ko">EasterAd SDK의 정상적인 작동을 위해서는 Unity Scene 내에 <c>EtaSdk</c> 스크립트를 컴포넌트로 가지는 오브젝트가 단일하게 존재해야 합니다.</para>
     /// <para xml:lang="en">For the proper operation of the EasterAd SDK, there must be a single object in the Unity Scene that has the <c>EtaSdk</c> script as a component.</para>
     /// </remarks>
-    public class EtaSdk : MonoBehaviour
+    public class EasterAdSdk : MonoBehaviour
     {
         private static readonly ImpressionCtrl ImpressionCtrl = new ImpressionCtrl();
-        private EtaSdkClient? _etaSdkClient;
-        private static EtaSdk? _instance;
+        private EasterAdSdkClient? _etaSdkClient;
+        private static EasterAdSdk? _instance;
+        /// <summary>
+        /// todo
+        /// </summary>
         public static bool OnceInitialized { get; private set; }
 
         private static string configFilePath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
@@ -41,7 +45,7 @@ namespace ETA
         internal string sdkKey = "";
         internal bool logEnable;
         
-        internal bool customInfoEnabled = false;
+        internal bool customInfoEnabled;
         internal int customDeviceType = -1;
         internal string customPlatform = "";
         internal string customLanguage = "";
@@ -52,20 +56,20 @@ namespace ETA
         /// <para xml:lang="ko"><c>EtaSdk</c>의 인스턴스를 가져옵니다. 인스턴스가 없으면 새로 생성합니다.</para>
         /// <para xml:lang="en">Gets the instance of <c>EtaSdk</c>. If no instance exists, a new one is created.</para>
         /// </summary>
-        public static EtaSdk Instance
+        public static EasterAdSdk Instance
         {
             get
             {
                 if (_instance == null)
                 {
-                    _instance = FindFirstObjectByType<EtaSdk>();
+                    _instance = FindFirstObjectByType<EasterAdSdk>();
                     if (_instance == null)
                     {
                         throw new Exception("EtaSdk is not Enabled, Please Remove EasterAd Script or Enable EtaSdk at Window -> EasterAd");
                     }
                 }
                 
-                _instance._etaSdkClient ??= EtaSdkClient.CreateClient(_instance);
+                _instance._etaSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
                 
                 return _instance;
             }
@@ -79,11 +83,11 @@ namespace ETA
         {
             if(_instance == null)
             {
-                _instance = FindFirstObjectByType<EtaSdk>();
+                _instance = FindFirstObjectByType<EasterAdSdk>();
                 if (_instance == null)
                 {
-                    _instance = new GameObject("EtaSdk").AddComponent<EtaSdk>();
-                    _instance._etaSdkClient ??= EtaSdkClient.CreateClient(_instance);
+                    _instance = new GameObject("EtaSdk").AddComponent<EasterAdSdk>();
+                    _instance._etaSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
                 }
             }
         }
@@ -95,7 +99,7 @@ namespace ETA
         /// </summary>
         public static void DestroyCall()
         {
-            if(_instance == null) _instance = FindFirstObjectByType<EtaSdk>();
+            if(_instance == null) _instance = FindFirstObjectByType<EasterAdSdk>();
             if (_instance != null && _instance.gameObject != null)
             {
                 DestroyImmediate(_instance.gameObject);
@@ -139,7 +143,7 @@ namespace ETA
             }
         }
 
-        private EtaSdk()
+        private EasterAdSdk()
         {
             RefreshConfig();
         }
@@ -183,7 +187,7 @@ namespace ETA
             if (_time > 5)
             {
                 _time = 0;
-                FuncCtrl.FailFuncCall();
+                FunctionScheduler.FailFuncCall();
             }
         }
         
@@ -235,6 +239,9 @@ namespace ETA
             _etaSdkClient.AxesNames = GetAxesNames();
             OnceInitialized = true;
         }
+        /// <summary>
+        /// todo
+        /// </summary>
         public void ReInitialize()
         {
             RefreshConfig();
