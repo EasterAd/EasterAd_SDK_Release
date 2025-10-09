@@ -27,11 +27,12 @@ namespace ETA
     /// </remarks>
     public class EasterAdSdk : MonoBehaviour
     {
-        private static readonly ImpressionCtrl ImpressionCtrl = new ImpressionCtrl();
         private EasterAdSdkClient? _easterAdSdkClient;
         private static EasterAdSdk? _instance;
+        
         /// <summary>
-        /// todo
+        /// <para xml:lang="ko">SDK가 한 번이라도 초기화되었는지 여부를 나타냅니다.</para>
+        /// <para xml:lang="en">Indicates whether the SDK has been initialized at least once.</para>
         /// </summary>
         public static bool OnceInitialized { get; private set; }
 
@@ -169,7 +170,7 @@ namespace ETA
         void Update()
         {
             _easterAdSdkClient!.LogEnable = logEnable;
-            ImpressionCtrl.ImpressionRoutine();
+            _easterAdSdkClient.ImpressionRoutine();
 #if UNITY_EDITOR
             InstanceManager.UI.UpdateCurrentGameDisplay();
 #endif
