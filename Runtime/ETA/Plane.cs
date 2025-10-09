@@ -17,6 +17,17 @@ namespace ETA
         {
             FunctionScheduler.FuncCall(ref _client, "Load");
         }
+        
+        public override string StartInteraction()
+        {
+            FunctionScheduler.FuncCall(ref _client, "StartInteraction", out string interactionUrl);
+            return interactionUrl;
+        }
+        
+        public override void EndInteraction()
+        {
+            FunctionScheduler.FuncCall(ref _client, "EndInteraction");
+        }
 
         /// <summary>  
         /// <para xml:lang="ko"><c>Plane</c>의 생성자입니다.</para>  

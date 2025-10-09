@@ -19,10 +19,12 @@ namespace ETA
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
         public bool loadOnStart = true;
+        public bool interactable = false;
+        public bool enableRefresh = true;
         public float refreshTime = 10.0f;
         
-        private bool _isImpressed;
-        private float _afterImpressedTime;
+        private bool _startRefresh;
+        private float _refreshWaited;
         
 
         internal void Awake() // todo change Destroy process
@@ -40,6 +42,8 @@ namespace ETA
             }
 
             _client = GetClient(gameObject, adUnitId);
+            _client.AllowImpression = allowImpression;
+            _client.Interactable = interactable;
             EasterAdSdk.Instance.AddItemClient(adUnitId, ref _client);
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
@@ -51,25 +55,36 @@ namespace ETA
         
         private void Update()
         {
-            if(_isImpressed)
+            _client.AllowImpression=allowImpression;
+            _client.Interactable=interactable;
+            
+            if (!enableRefresh) { return; }
+            
+            if(_startRefresh)
             {
-                _afterImpressedTime += Time.unscaledDeltaTime;
-                if (_afterImpressedTime >= refreshTime && Client.GetStatus() == ItemStatus.Impressed)
+                _refreshWaited += Time.unscaledDeltaTime;
+                if (_refreshWaited >= refreshTime)
                 {
-                    _isImpressed = false;
-                    _afterImpressedTime = 0.0f;
+                    _startRefresh = false;
+                    _refreshWaited = 0.0f;
                     Load();
                 }
+
+                if (Client.GetStatus() != ItemStatus.Impressed && Client.GetStatus() != ItemStatus.Interacted)
+                {
+                    _startRefresh = false;
+                    _refreshWaited = 0.0f;
+                }
             }
-            else if (Client.GetStatus() == ItemStatus.Impressed)
+            else if (Client.GetStatus() == ItemStatus.Impressed || Client.GetStatus() == ItemStatus.Interacted)
             {
-                _isImpressed = true;
-                _afterImpressedTime = 0.0f;
+                _startRefresh = true;
+                _refreshWaited = 0.0f;
             }
             else if (Client.GetStatus() == ItemStatus.Impressing)
             {
-                _isImpressed = false;
-                _afterImpressedTime = 0.0f;
+                _startRefresh = false;
+                _refreshWaited = 0.0f;
             }
         }
 
@@ -129,6 +144,9 @@ namespace ETA
         // {
         //     Client.Destroy();
         // }
+        
+        public abstract string StartInteraction();
+        public abstract void EndInteraction();
 
         /// <summary>
         /// <para xml:lang="ko">상속된 클래스에서 구현해야 합니다.</para>

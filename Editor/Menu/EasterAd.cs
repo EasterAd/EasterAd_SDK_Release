@@ -38,7 +38,7 @@ namespace ETA_Editor.Menu
             //Show existing window instance. If one doesn't exist, make one.
             EasterAd window = (EasterAd)GetWindow(typeof(EasterAd));
             window.titleContent = new GUIContent("EasterAd");
-            window.minSize = new Vector2(820,350);
+            // window.minSize = new Vector2(820,350);
             window.Show();
         }
 
@@ -47,7 +47,7 @@ namespace ETA_Editor.Menu
             string filename = "ETA_Config.txt";
             string filepath = Path.Combine(Application.streamingAssetsPath, filename);
             if (File.Exists(filepath) == false) { return; }
-            
+
             string[] config = File.ReadAllLines(filepath);
             _easterAdEnabled = Boolean.Parse(config[0]);
             _tempGameId = config[1];
@@ -142,6 +142,8 @@ namespace ETA_Editor.Menu
             EditorGUILayout.LabelField(_currentSdkKey);
             EditorGUILayout.EndHorizontal();
 
+            _tempLogEnable = EditorGUILayout.Toggle("Enable Log", _tempLogEnable);
+
             _customInfoEnable = EditorGUILayout.BeginToggleGroup ("Custom Info", _customInfoEnable);
 
             EditorGUILayout.BeginHorizontal();
@@ -164,7 +166,6 @@ namespace ETA_Editor.Menu
 
             EditorGUILayout.EndToggleGroup ();
 
-            _tempLogEnable = EditorGUILayout.Toggle("Enable Log", _tempLogEnable);
             if (GUILayout.Button("Save"))
             {
                 SaveSettings();
@@ -183,17 +184,22 @@ namespace ETA_Editor.Menu
             
             EditorGUILayout.LabelField("List of Items", EditorStyles.boldLabel);
             
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Index", GUILayout.Width(50));
             EditorGUILayout.LabelField("Item ID", GUILayout.Width(200));
             EditorGUILayout.LabelField("Location",GUILayout.Width(150));
             EditorGUILayout.LabelField("Status",GUILayout.Width(100));
-            EditorGUILayout.LabelField("Impression",GUILayout.Width(100));
+            EditorGUILayout.LabelField("Impression",GUILayout.Width(80));
             EditorGUILayout.LabelField("Load On Start",GUILayout.Width(100));
+            EditorGUILayout.LabelField("Interactable",GUILayout.Width(80));
+            EditorGUILayout.LabelField("Interaction",GUILayout.Width(100));
+            EditorGUILayout.LabelField("",GUILayout.Width(20));
+            EditorGUILayout.LabelField("Refresh",GUILayout.Width(70));
             EditorGUILayout.LabelField("Remove", GUILayout.Width(75));
             EditorGUILayout.EndHorizontal();
-            
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(820), GUILayout.Height(200));
+
             int index = 1;
             foreach (Item item in FindObjectsByType<Item>(FindObjectsSortMode.InstanceID))
             {
@@ -205,14 +211,34 @@ namespace ETA_Editor.Menu
                 if(Application.isPlaying)
                 {
                     EditorGUILayout.LabelField(item.Client.GetStatus().ToString(),GUILayout.Width(100));
-                    item.Client.AllowImpression = item.allowImpression;
                 }
                 else
                 {
                     EditorGUILayout.LabelField("Editor Mode",GUILayout.Width(100));
                 }
-                item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(100));
+                item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(80));
                 item.loadOnStart = GUILayout.Toggle(item.loadOnStart, "", GUILayout.Width(100));
+                item.interactable = GUILayout.Toggle(item.interactable, "", GUILayout.Width(80));
+                if(GUILayout.Button("Start", GUILayout.Width(50)))
+                {
+                    if (Application.isPlaying)
+                    {
+                        string interactionUrl = item.StartInteraction();
+                        if (!String.IsNullOrEmpty(interactionUrl))
+                        {
+                            Application.OpenURL(interactionUrl);
+                        }
+                    }
+                }
+                if(GUILayout.Button("End", GUILayout.Width(50)))
+                {
+                    if (Application.isPlaying)
+                    {
+                        item.EndInteraction();
+                    }
+                }
+                EditorGUILayout.LabelField("",GUILayout.Width(20));
+                item.enableRefresh = GUILayout.Toggle(item.enableRefresh, "", GUILayout.Width(70));
                 
                 if (GUILayout.Button("Remove", GUILayout.Width(75)))
                 {
