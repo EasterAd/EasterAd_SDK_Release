@@ -71,6 +71,62 @@ namespace ETA_Editor.Menu
 
         private void OnGUI()
         {
+            // Migration status check and notification
+            bool hasLegacyAssets = EasterAdMigrationHelper.HasLegacyAssets();
+            bool hasUnifiedShader = EasterAdMigrationHelper.HasUnifiedShader();
+
+            if (hasLegacyAssets)
+            {
+                EditorGUILayout.BeginVertical("box");
+                EditorGUILayout.LabelField("⚠ Migration Available", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox(
+                    "Legacy assets detected in 'Assets/EasterAd/'.\n" +
+                    "The new system (v1.2.0+) uses assets directly from the package.\n\n" +
+                    "All assets are now managed under:\n" +
+                    "Packages/EasterAd SDK/Runtime/",
+                    MessageType.Warning
+                );
+
+                EditorGUILayout.Space();
+
+                // Migration buttons
+                EditorGUILayout.BeginHorizontal();
+
+                if (GUILayout.Button("1. Migrate Prefab References", GUILayout.Height(30)))
+                {
+                    EasterAdMigrationHelper.MigratePrefabReferences();
+                }
+
+                GUI.enabled = !hasLegacyAssets || hasUnifiedShader;
+                if (GUILayout.Button("2. Clean Up Legacy Assets", GUILayout.Height(30)))
+                {
+                    EasterAdMigrationHelper.CleanupLegacyAssets();
+                }
+                GUI.enabled = true;
+
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.LabelField("Status: " + EasterAdMigrationHelper.GetMigrationStatus(), EditorStyles.miniLabel);
+                EditorGUILayout.EndVertical();
+
+                EditorGUILayout.Space();
+            }
+            else if (hasUnifiedShader)
+            {
+                // Show migration success message only once
+                if (!EditorPrefs.GetBool("EasterAd_UnifiedShaderNoticeShown", false))
+                {
+                    EditorGUILayout.HelpBox(
+                        "✅ Using new unified shader system.\n" +
+                        "All render pipelines are supported automatically.",
+                        MessageType.Info
+                    );
+
+                    // Mark as shown
+                    EditorPrefs.SetBool("EasterAd_UnifiedShaderNoticeShown", true);
+                }
+            }
+
             GUILayout.Label ("Base Settings", EditorStyles.boldLabel);
             _easterAdEnabled = EditorGUILayout.BeginToggleGroup ("Enable EasterAd SDK", _easterAdEnabled);
 
@@ -168,18 +224,33 @@ namespace ETA_Editor.Menu
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndToggleGroup ();
 
-            GUILayout.Label("Import Ad Assets", EditorStyles.boldLabel);
-            if (GUILayout.Button("Import Built-in Render Pipeline Assets"))
+            // Prefab section
+            GUILayout.Label("Ad Prefab", EditorStyles.boldLabel);
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Packages/com.easterad.easterad/Runtime/Prefabs/PlaneItem.prefab"
+            );
+
+            if (prefab != null)
             {
-                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_BuiltIn.unitypackage");
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.ObjectField("Plane Item Prefab", prefab, typeof(GameObject), false);
+                if (GUILayout.Button("Select", GUILayout.Width(60)))
+                {
+                    Selection.activeObject = prefab;
+                    EditorGUIUtility.PingObject(prefab);
+                }
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.HelpBox(
+                    "Drag this prefab into your scene to place an ad.\n" +
+                    "The unified shader automatically supports all render pipelines.",
+                    MessageType.Info
+                );
             }
-            if (GUILayout.Button("Import Universal Render Pipeline (URP) Assets"))
+            else
             {
-                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_URP.unitypackage");
-            }
-            if (GUILayout.Button("Import High Definition Render Pipeline (HDRP) Assets"))
-            {
-                ImportPackage("Packages/com.easterad.easterad/Packages/EasterAd_HDRP.unitypackage");
+                EditorGUILayout.HelpBox("Prefab not found. Package may need reinstallation.", MessageType.Error);
             }
 
             // if (!Application.isPlaying)

@@ -65,10 +65,8 @@ namespace ETA
                 }
             }
 
-            // Material material = defaultMaterial ? new Material(defaultMaterial) : new Material(defaultShader ? defaultShader : Shader.Find("EasterAd/DefaultShader"));
-
             Material material;
-            
+
             if (defaultMaterial != null)
             {
                 material = new Material(defaultMaterial)
@@ -78,10 +76,44 @@ namespace ETA
             }
             else
             {
-                // ReSharper disable ShaderLabShaderReferenceNotResolved
-                material = new Material(Shader.Find("EasterAd/DefaultShader"));
+                // Try unified shader first
+                Shader shader = Shader.Find("EasterAd/UnifiedShader");
+
+                if (shader != null)
+                {
+                    material = new Material(shader);
+                }
+                else
+                {
+                    // Fallback to legacy shader
+                    // ReSharper disable ShaderLabShaderReferenceNotResolved
+                    shader = Shader.Find("EasterAd/DefaultShader");
+                    if (shader != null)
+                    {
+                        material = new Material(shader);
+
+                        // Show warning once per session
+                        #if UNITY_EDITOR
+                        if (!UnityEditor.EditorPrefs.GetBool("EasterAd_LegacyWarningShown_1.2.0", false))
+                        {
+                            Debug.LogWarning(
+                                "[EasterAd] Using legacy shader. Please migrate to the new unified system:\n" +
+                                "1. Open Window > EasterAd\n" +
+                                "2. Click 'Migrate to New System' button\n" +
+                                "This will update all prefab references and clean up old assets."
+                            );
+                            UnityEditor.EditorPrefs.SetBool("EasterAd_LegacyWarningShown_1.2.0", true);
+                        }
+                        #endif
+                    }
+                    else
+                    {
+                        Debug.LogError("[EasterAd] No shader found. Package may be corrupted.");
+                        return;
+                    }
+                }
             }
-            
+
             if (material == null)
             {
                 Debug.LogError("Material creation fail.");
