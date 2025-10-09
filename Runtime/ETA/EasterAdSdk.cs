@@ -28,33 +28,33 @@ namespace ETA
     public class EasterAdSdk : MonoBehaviour
     {
         private static readonly ImpressionCtrl ImpressionCtrl = new ImpressionCtrl();
-        private EasterAdSdkClient? _etaSdkClient;
+        private EasterAdSdkClient? _easterAdSdkClient;
         private static EasterAdSdk? _instance;
         /// <summary>
         /// todo
         /// </summary>
         public static bool OnceInitialized { get; private set; }
 
-        private static string configFilePath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
+        private static string _configFilePath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
         /// <summary>
         /// <para xml:lang="ko">SDK가 사용할 대상 카메라입니다. 설정되지 않은 경우 자동으로 <c>Camera.main</c>을 시도합니다.</para>
         /// <para xml:lang="en">The target camera used by the SDK. If not set, it will try to use <c>Camera.main</c> automatically.</para>
         /// </summary>
         public Camera? targetCamera;
-        internal string gameId = "";
+        internal string GameId = "";
         internal string sdkKey = "";
         internal bool logEnable;
         
-        internal bool customInfoEnabled;
-        internal int customDeviceType = -1;
-        internal string customPlatform = "";
-        internal string customLanguage = "";
+        internal bool CustomInfoEnabled;
+        internal int CustomDeviceType = -1;
+        internal string CustomPlatform = "";
+        internal string CustomLanguage = "";
         
         internal static readonly Queue<Item> ItemAwakeQueue = new Queue<Item>();
         
         /// <summary>
-        /// <para xml:lang="ko"><c>EtaSdk</c>의 인스턴스를 가져옵니다. 인스턴스가 없으면 새로 생성합니다.</para>
-        /// <para xml:lang="en">Gets the instance of <c>EtaSdk</c>. If no instance exists, a new one is created.</para>
+        /// <para xml:lang="ko"><c>EasterAdSdk</c>의 인스턴스를 가져옵니다. 인스턴스가 없으면 새로 생성합니다.</para>
+        /// <para xml:lang="en">Gets the instance of <c>EasterAdSdk</c>. If no instance exists, a new one is created.</para>
         /// </summary>
         public static EasterAdSdk Instance
         {
@@ -65,19 +65,19 @@ namespace ETA
                     _instance = FindFirstObjectByType<EasterAdSdk>();
                     if (_instance == null)
                     {
-                        throw new Exception("EtaSdk is not Enabled, Please Remove EasterAd Script or Enable EtaSdk at Window -> EasterAd");
+                        throw new Exception("EasterAdSdk is not Enabled, Please Remove EasterAd Script or Enable EasterAdSdk at Window -> EasterAd");
                     }
                 }
                 
-                _instance._etaSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
+                _instance._easterAdSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
                 
                 return _instance;
             }
         }
         
         /// <summary>
-        /// <para xml:lang="ko"><c>EtaSdk</c> 인스턴스를 생성합니다. 이미 인스턴스가 존재하면 아무 작업도 수행하지 않습니다.</para>
-        /// <para xml:lang="en">Creates an instance of <c>EtaSdk</c>. If an instance already exists, no action is taken.</para>
+        /// <para xml:lang="ko"><c>EasterAdSdk</c> 인스턴스를 생성합니다. 이미 인스턴스가 존재하면 아무 작업도 수행하지 않습니다.</para>
+        /// <para xml:lang="en">Creates an instance of <c>EasterAdSdk</c>. If an instance already exists, no action is taken.</para>
         /// </summary>
         public static void CreateEtaSdk()
         {
@@ -86,8 +86,8 @@ namespace ETA
                 _instance = FindFirstObjectByType<EasterAdSdk>();
                 if (_instance == null)
                 {
-                    _instance = new GameObject("EtaSdk").AddComponent<EasterAdSdk>();
-                    _instance._etaSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
+                    _instance = new GameObject("EasterAdSdk").AddComponent<EasterAdSdk>();
+                    _instance._easterAdSdkClient ??= EasterAdSdkClient.CreateClient(_instance);
                 }
             }
         }
@@ -121,25 +121,25 @@ namespace ETA
         
         private void RefreshConfig()
         {
-            if (!File.Exists(configFilePath)) { return; }
-            string[] config = File.ReadAllLines(configFilePath);
+            if (!File.Exists(_configFilePath)) { return; }
+            string[] config = File.ReadAllLines(_configFilePath);
             
-            gameId = config[1];
+            GameId = config[1];
             sdkKey = config[2];
             logEnable = bool.Parse(config[3]);
             if (bool.Parse(config[4]))
             {
-                customInfoEnabled = true;
-                customDeviceType = DeviceTypeCode((DeviceType)Enum.Parse(typeof(DeviceType), config[5]));
-                customPlatform = PlatformCode((RuntimePlatform)Enum.Parse(typeof(RuntimePlatform), config[6]));
-                customLanguage = LanguageCode((SystemLanguage)Enum.Parse(typeof(SystemLanguage), config[7]));
+                CustomInfoEnabled = true;
+                CustomDeviceType = DeviceTypeCode((DeviceType)Enum.Parse(typeof(DeviceType), config[5]));
+                CustomPlatform = PlatformCode((RuntimePlatform)Enum.Parse(typeof(RuntimePlatform), config[6]));
+                CustomLanguage = LanguageCode((SystemLanguage)Enum.Parse(typeof(SystemLanguage), config[7]));
             }
             else
             {
-                customInfoEnabled = false;
-                customDeviceType = -1;
-                customPlatform = "";
-                customLanguage = "";
+                CustomInfoEnabled = false;
+                CustomDeviceType = -1;
+                CustomPlatform = "";
+                CustomLanguage = "";
             }
         }
 
@@ -168,7 +168,7 @@ namespace ETA
 
         void Update()
         {
-            _etaSdkClient!.LogEnable = logEnable;
+            _easterAdSdkClient!.LogEnable = logEnable;
             ImpressionCtrl.ImpressionRoutine();
 #if UNITY_EDITOR
             InstanceManager.UI.UpdateCurrentGameDisplay();
@@ -201,8 +201,8 @@ namespace ETA
             // make null all the static variables
             
             OnceInitialized = false;
-            _etaSdkClient?.OnApplicationQuit();
-            _etaSdkClient = null;
+            _easterAdSdkClient?.OnApplicationQuit();
+            _easterAdSdkClient = null;
             _instance = null;
         }
 
@@ -231,12 +231,12 @@ namespace ETA
                 Debug.Log("EtaSdk is already initialized");
                 return;
             }
-            if (customInfoEnabled) 
-                _etaSdkClient!.Initialize(gameId, logEnable, sdkKey, customDeviceType, customPlatform, customLanguage);
+            if (CustomInfoEnabled) 
+                _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey, CustomDeviceType, CustomPlatform, CustomLanguage);
             else
-                _etaSdkClient!.Initialize(gameId, logEnable, sdkKey);
+                _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey);
             if (targetCamera!=null) { SetCamera(targetCamera); }
-            _etaSdkClient.AxesNames = GetAxesNames();
+            _easterAdSdkClient.AxesNames = GetAxesNames();
             OnceInitialized = true;
         }
         /// <summary>
@@ -246,8 +246,8 @@ namespace ETA
         {
             RefreshConfig();
             
-            if (customInfoEnabled) _etaSdkClient!.ReInitialize(logEnable, customDeviceType, customPlatform, customLanguage);
-            else _etaSdkClient!.ReInitialize(logEnable);
+            if (CustomInfoEnabled) _easterAdSdkClient!.ReInitialize(logEnable, CustomDeviceType, CustomPlatform, CustomLanguage);
+            else _easterAdSdkClient!.ReInitialize(logEnable);
         }
 
         /// <summary>
@@ -265,7 +265,7 @@ namespace ETA
 #nullable enable
         public ItemClient? GetItemClient(string adUnitId)
         {
-            return _etaSdkClient!.GetItemClient(adUnitId);
+            return _easterAdSdkClient!.GetItemClient(adUnitId);
         }
 #nullable disable
 
@@ -280,7 +280,7 @@ namespace ETA
         /// </returns>
         public List<string> GetItemClientList()
         {
-            return _etaSdkClient!.GetItemClientList();
+            return _easterAdSdkClient!.GetItemClientList();
         }
 
         /// <summary>
@@ -293,7 +293,7 @@ namespace ETA
         /// </returns>
         public Dictionary<string, ItemClient> GetItemClient()
         {
-            return _etaSdkClient!.GetItemClient();
+            return _easterAdSdkClient!.GetItemClient();
         }
         
         /// <summary>
@@ -310,7 +310,7 @@ namespace ETA
         /// </param>
         public void AddItemClient(string key, ref ItemClient itemClient)
         {
-            _etaSdkClient!.AddItemClient(key, ref itemClient);
+            _easterAdSdkClient!.AddItemClient(key, ref itemClient);
         }
         
         /// <summary>
@@ -327,7 +327,7 @@ namespace ETA
         /// </param>
         public void UpdateItemClient(string key, ref ItemClient itemClient)
         {
-            _etaSdkClient!.UpdateItemClient(key, ref itemClient);
+            _easterAdSdkClient!.UpdateItemClient(key, ref itemClient);
         }
         
         /// <summary>
@@ -340,7 +340,7 @@ namespace ETA
         /// </param>
         public void RemoveItemClient(string key)
         {
-            _etaSdkClient!.RemoveItemClient(key);
+            _easterAdSdkClient!.RemoveItemClient(key);
         }
 
         private List<string> GetAxesNames()

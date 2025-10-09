@@ -3,7 +3,7 @@
   "version": "1.1.4",
   "displayName": "Easter Ad",
   "description": "Intrinsic in-game advertising plugin for Unity",
-  "unity": "2020.2",
+  "unity": "2021.3.45f2",
   "author": {
     "name": "Easterad",
     "email": "easterad-official@easterad.com",
