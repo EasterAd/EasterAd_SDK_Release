@@ -138,6 +138,8 @@ Shader "EasterAd/UnifiedShader"
             #pragma fragment frag
             #pragma multi_compile_instancing
 
+            #include "UnityCG.cginc"
+
             struct Attributes
             {
                 float4 vertex : POSITION;
