@@ -54,7 +54,11 @@ namespace ETA_Editor.Menu
             // Find all Item components in the scene
             int migratedCount = 0;
             int checkedCount = 0;
-            Item[] allItems = GameObject.FindObjectsOfType<Item>();
+#if UNITY_6000_0_OR_NEWER
+            Item[] allItems = Object.FindObjectsByType<Item>(FindObjectsInactive.Include, FindObjectsSortMode.InstanceID);
+#else
+            Item[] allItems = Object.FindObjectsOfType<Item>();
+#endif
 
             if (allItems.Length == 0)
             {
