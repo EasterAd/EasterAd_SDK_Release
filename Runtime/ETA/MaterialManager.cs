@@ -1,8 +1,6 @@
+// ReSharper disable once RedundantNullableDirective
 #nullable enable
-using System;
-using System.ComponentModel;
 using UnityEngine;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -19,7 +17,15 @@ namespace ETA
     [ExecuteInEditMode]
     public class MaterialManager : MonoBehaviour
     {
+        /// <summary>
+        /// <para xml:lang="ko">프리팹에 적용할 기본 머터리얼입니다.</para>
+        /// <para xml:lang="en">The default material applied to the prefab.</para>
+        /// </summary>
         public Material? defaultMaterial;
+        /// <summary>
+        /// <para xml:lang="ko">기본 셰이더입니다. 설정 시 기본 머터리얼의 셰이더를 이 값으로 교체합니다.</para>
+        /// <para xml:lang="en">The default shader. When set, it overrides the shader of the default material.</para>
+        /// </summary>
         public Shader? defaultShader;
         private Renderer? planeRenderer;
         void Awake()
@@ -59,10 +65,8 @@ namespace ETA
                 }
             }
 
-            // Material material = defaultMaterial ? new Material(defaultMaterial) : new Material(defaultShader ? defaultShader : Shader.Find("EasterAd/DefaultShader"));
-
             Material material;
-            
+
             if (defaultMaterial != null)
             {
                 material = new Material(defaultMaterial)
@@ -72,9 +76,44 @@ namespace ETA
             }
             else
             {
-                material = new Material(Shader.Find("EasterAd/DefaultShader"));
+                // Try unified shader first
+                Shader shader = Shader.Find("EasterAd/UnifiedShader");
+
+                if (shader != null)
+                {
+                    material = new Material(shader);
+                }
+                else
+                {
+                    // Fallback to legacy shader
+                    // ReSharper disable ShaderLabShaderReferenceNotResolved
+                    shader = Shader.Find("EasterAd/DefaultShader");
+                    if (shader != null)
+                    {
+                        material = new Material(shader);
+
+                        // Show warning once per session
+                        #if UNITY_EDITOR
+                        if (!UnityEditor.EditorPrefs.GetBool("EasterAd_LegacyWarningShown_1.2.0", false))
+                        {
+                            Debug.LogWarning(
+                                "[EasterAd] Using legacy shader. Please migrate to the new unified system:\n" +
+                                "1. Open Window > EasterAd\n" +
+                                "2. Click 'Migrate to New System' button\n" +
+                                "This will update all prefab references and clean up old assets."
+                            );
+                            UnityEditor.EditorPrefs.SetBool("EasterAd_LegacyWarningShown_1.2.0", true);
+                        }
+                        #endif
+                    }
+                    else
+                    {
+                        Debug.LogError("[EasterAd] No shader found. Package may be corrupted.");
+                        return;
+                    }
+                }
             }
-            
+
             if (material == null)
             {
                 Debug.LogError("Material creation fail.");
@@ -93,10 +132,11 @@ namespace ETA
             );
 
             Plane plane = GetComponent<Plane>();
-            if (plane != null && plane.Client != null)
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (plane != null && plane.Client != null) // 경고 무시하고 plane.Client != null 검사해야 함
             {
                 ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
-                bool hideLogo = status == ETA_Implementation.ItemStatus.Loaded || status == ETA_Implementation.ItemStatus.Impressing || status == ETA_Implementation.ItemStatus.Impressed;
+                bool hideLogo = status >= ETA_Implementation.ItemStatus.Loaded;
                 data.z = hideLogo ? 0.0f : 1.0f;
             }
 

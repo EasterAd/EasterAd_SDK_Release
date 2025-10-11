@@ -1,4 +1,5 @@
 ﻿using ETA_Implementation;
+using ETA_Implementation.Library;
 using UnityEngine;
 
 namespace ETA
@@ -14,7 +15,30 @@ namespace ETA
         public override void Load()
 #pragma warning restore CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
         {
-            FuncCtrl.FuncCall(ref _client, "Load");
+            FunctionScheduler.FuncCall(ref _client, "Load");
+        }
+        
+        /// <summary>
+        /// <para xml:lang="ko">광고와의 상호작용을 시작하고 상호작용 URL을 반환합니다.</para>
+        /// <para xml:lang="en">Starts interaction with the ad and returns the interaction URL.</para>
+        /// </summary>
+        /// <returns>
+        /// <para xml:lang="ko">상호작용 URL 문자열입니다.</para>
+        /// <para xml:lang="en">The interaction URL string.</para>
+        /// </returns>
+        public override string StartInteraction()
+        {
+            FunctionScheduler.FuncCall(ref _client, "StartInteraction", out string interactionUrl);
+            return interactionUrl;
+        }
+        
+        /// <summary>
+        /// <para xml:lang="ko">광고와의 상호작용을 종료합니다.</para>
+        /// <para xml:lang="en">Ends interaction with the ad.</para>
+        /// </summary>
+        public override void EndInteraction()
+        {
+            FunctionScheduler.FuncCall(ref _client, "EndInteraction");
         }
 
         /// <summary>  
