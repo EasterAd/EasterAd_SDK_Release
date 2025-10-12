@@ -104,9 +104,9 @@ namespace ETA_Editor.Menu
                 string adUnitId = itemComponent.adUnitId;
                 bool allowImpression = itemComponent.allowImpression;
                 bool loadOnStart = itemComponent.loadOnStart;
-                Vector3 position = oldItem.transform.position;
-                Quaternion rotation = oldItem.transform.rotation;
-                Vector3 scale = oldItem.transform.localScale;
+                Vector3 localPosition = oldItem.transform.localPosition;
+                Quaternion localRotation = oldItem.transform.localRotation;
+                Vector3 localScale = oldItem.transform.localScale;
                 Transform parent = oldItem.transform.parent;
                 string name = oldItem.name;
                 int siblingIndex = oldItem.transform.GetSiblingIndex();
@@ -114,9 +114,9 @@ namespace ETA_Editor.Menu
                 // Instantiate new prefab
                 GameObject newInstance = (GameObject)PrefabUtility.InstantiatePrefab(newPrefab, parent);
                 newInstance.name = name;
-                newInstance.transform.position = position;
-                newInstance.transform.rotation = rotation;
-                newInstance.transform.localScale = scale;
+                newInstance.transform.localPosition = localPosition;
+                newInstance.transform.localRotation = localRotation;
+                newInstance.transform.localScale = localScale;
                 newInstance.transform.SetSiblingIndex(siblingIndex);
 
                 // Restore configuration
@@ -126,10 +126,10 @@ namespace ETA_Editor.Menu
                     newItem.adUnitId = adUnitId;
                     newItem.allowImpression = allowImpression;
                     newItem.loadOnStart = loadOnStart;
-                }
 
-                // Mark as dirty for saving
-                EditorUtility.SetDirty(newInstance);
+                    // Record property modifications for prefab override
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(newItem);
+                }
 
                 // Destroy old instance
                 Object.DestroyImmediate(oldItem);

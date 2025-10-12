@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2025.10.12
+
+### Fixed
+
+-   Fix "Saving Prefab to immutable folder" error by properly recording prefab overrides to scene instead of package asset.
+-   Fix transform restoration by using consistent local coordinates.
+
 ## [1.2.1] - 2025.10.12
 
 ### Fixed
