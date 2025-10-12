@@ -285,17 +285,17 @@ namespace ETA_Editor.Menu
             // }
         }
 
-        private void ImportPackage(string packageName)
-        {
-            if (!string.IsNullOrEmpty(packageName))
-            {
-                AssetDatabase.ImportPackage(packageName, true);
-            }
-            else
-            {
-                Debug.Log(packageName + " is not found.");
-            }
-        }
+        // private void ImportPackage(string packageName)
+        // {
+        //     if (!string.IsNullOrEmpty(packageName))
+        //     {
+        //         AssetDatabase.ImportPackage(packageName, true);
+        //     }
+        //     else
+        //     {
+        //         Debug.Log(packageName + " is not found.");
+        //     }
+        // }
 
         private void SaveSettings()
         {

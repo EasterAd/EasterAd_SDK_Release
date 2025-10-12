@@ -76,7 +76,8 @@ namespace ETA
             }
             else
             {
-                // Try unified shader first
+                
+                // ReSharper disable once ShaderLabShaderReferenceNotResolved
                 Shader shader = Shader.Find("EasterAd/UnifiedShader");
 
                 if (shader != null)
