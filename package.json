@@ -1,6 +1,6 @@
 {
   "name": "com.easterad.easterad",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "displayName": "Easter Ad",
   "description": "Intrinsic in-game advertising plugin for Unity",
   "unity": "2021.3",

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025.10.12
+
+### Fixed
+
+-   Added missing meta files
+-   Remove Error from EasterAdSdk.cs
+
 ## [1.2.0] - 2025.10.11
 
 ### Added
