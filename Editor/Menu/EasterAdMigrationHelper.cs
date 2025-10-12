@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ETA;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.SceneManagement;
 
 namespace ETA_Editor.Menu
 {
@@ -11,16 +12,16 @@ namespace ETA_Editor.Menu
     public static class EasterAdMigrationHelper
     {
         // Path mappings for migration
-        private const string OLD_PREFAB_PATH = "Assets/EasterAd/Plane Item.prefab";
-        private const string NEW_PREFAB_PATH = "Packages/com.easterad.easterad/Runtime/Prefabs/PlaneItem.prefab";
-        private const string LEGACY_ASSET_FOLDER = "Assets/EasterAd";
+        private const string OldPrefabPath = "Assets/EasterAd/Plane Item.prefab";
+        private const string NewPrefabPath = "Packages/com.easterad.easterad/Runtime/Prefabs/PlaneItem.prefab";
+        private const string LegacyAssetFolder = "Assets/EasterAd";
 
         /// <summary>
         /// Check if legacy assets exist in the project
         /// </summary>
         public static bool HasLegacyAssets()
         {
-            return AssetDatabase.IsValidFolder(LEGACY_ASSET_FOLDER);
+            return AssetDatabase.IsValidFolder(LegacyAssetFolder);
         }
 
         /// <summary>
@@ -28,6 +29,7 @@ namespace ETA_Editor.Menu
         /// </summary>
         public static bool HasUnifiedShader()
         {
+            // ReSharper disable once ShaderLabShaderReferenceNotResolved
             return Shader.Find("EasterAd/UnifiedShader") != null;
         }
 
@@ -36,6 +38,7 @@ namespace ETA_Editor.Menu
         /// </summary>
         public static bool HasLegacyShaders()
         {
+            // ReSharper disable once ShaderLabShaderReferenceNotResolved
             return Shader.Find("EasterAd/DefaultShader") != null;
         }
 
@@ -44,10 +47,10 @@ namespace ETA_Editor.Menu
         /// </summary>
         public static void MigratePrefabReferences()
         {
-            GameObject newPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NEW_PREFAB_PATH);
+            GameObject newPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NewPrefabPath);
             if (newPrefab == null)
             {
-                Debug.LogError($"[EasterAd] New prefab not found at: {NEW_PREFAB_PATH}");
+                Debug.LogError($"[EasterAd] New prefab not found at: {NewPrefabPath}");
                 return;
             }
 
@@ -78,7 +81,7 @@ namespace ETA_Editor.Menu
                 {
                     string sourcePath = AssetDatabase.GetAssetPath(sourcePrefab);
 
-                    if (sourcePath == OLD_PREFAB_PATH)
+                    if (sourcePath == OldPrefabPath)
                     {
                         itemsToMigrate.Add(item.gameObject);
                     }
@@ -129,7 +132,7 @@ namespace ETA_Editor.Menu
                 EditorUtility.SetDirty(newInstance);
 
                 // Destroy old instance
-                GameObject.DestroyImmediate(oldItem);
+                Object.DestroyImmediate(oldItem);
 
                 migratedCount++;
             }
@@ -138,7 +141,7 @@ namespace ETA_Editor.Menu
             {
                 Debug.Log($"[EasterAd] Successfully migrated {migratedCount} prefab instance(s) to the new system.");
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-                    UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene()
+                    SceneManager.GetActiveScene()
                 );
 
                 // Prompt to save the scene
@@ -170,13 +173,13 @@ namespace ETA_Editor.Menu
 
             foreach (string assetPath in allAssetPaths)
             {
-                if (assetPath.StartsWith(LEGACY_ASSET_FOLDER))
+                if (assetPath.StartsWith(LegacyAssetFolder))
                     continue;
 
                 string[] dependencies = AssetDatabase.GetDependencies(assetPath, false);
                 foreach (string dependency in dependencies)
                 {
-                    if (dependency.StartsWith(LEGACY_ASSET_FOLDER))
+                    if (dependency.StartsWith(LegacyAssetFolder))
                     {
                         referencingAssets.Add(assetPath);
                         break;
@@ -184,7 +187,7 @@ namespace ETA_Editor.Menu
                 }
             }
 
-            string message = $"This will delete the folder '{LEGACY_ASSET_FOLDER}' containing old assets.\n\n";
+            string message = $"This will delete the folder '{LegacyAssetFolder}' containing old assets.\n\n";
 
             if (referencingAssets.Count > 0)
             {
@@ -200,7 +203,7 @@ namespace ETA_Editor.Menu
                 "Delete",
                 "Cancel"))
             {
-                AssetDatabase.DeleteAsset(LEGACY_ASSET_FOLDER);
+                AssetDatabase.DeleteAsset(LegacyAssetFolder);
                 AssetDatabase.Refresh();
                 Debug.Log("[EasterAd] Legacy assets cleaned up successfully.");
 

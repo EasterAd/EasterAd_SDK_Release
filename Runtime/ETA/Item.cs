@@ -19,7 +19,7 @@ namespace ETA
         public string adUnitId = null!; //must be set in Unity Editor
         public bool allowImpression = true;
         public bool loadOnStart = true;
-        public bool interactable = false;
+        public bool interactable;
         public bool enableRefresh = true;
         public float refreshTime = 10.0f;
         
