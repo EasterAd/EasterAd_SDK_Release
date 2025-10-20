@@ -1,0 +1,37 @@
+// AdSegmentationPixelCounter.compute
+// Phase 4: RenderTexture에서 픽셀을 읽고 ComputeBuffer에 카운팅
+
+#pragma kernel EasterAd_CountPixels
+
+// 입력: Segmentation RenderTexture (R 채널에 ID 저장)
+Texture2D<float4> _SegmentationTexture;
+
+// 출력: 픽셀 카운트 버퍼 (uint[256])
+RWStructuredBuffer<uint> _PixelCountBuffer;
+
+// Thread Group: 8×8×1 (총 64 threads per group)
+[numthreads(8, 8, 1)]
+void EasterAd_CountPixels(uint3 id : SV_DispatchThreadID)
+{
+    // 텍스처 크기 가져오기
+    uint width, height;
+    _SegmentationTexture.GetDimensions(width, height);
+    
+    // 범위 체크
+    if (id.x >= width || id.y >= height)
+        return;
+    
+    // 픽셀 값 읽기 (R 채널: 0~1 범위의 ID)
+    float4 color = _SegmentationTexture[id.xy];
+    
+    // 0~1 범위를 0~255 정수로 변환
+    uint segmentationId = (uint)(color.r * 255.0 + 0.5);  // 반올림
+    
+    // 유효한 ID만 카운팅 (1~255)
+    // ID 0은 배경이므로 제외
+    if (segmentationId > 0 && segmentationId < 256)
+    {
+        // 원자적 증가 (Thread-Safe)
+        InterlockedAdd(_PixelCountBuffer[segmentationId], 1);
+    }
+}

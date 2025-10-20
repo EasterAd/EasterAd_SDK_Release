@@ -10,12 +10,13 @@ GameObject:
   m_Component:
   - component: {fileID: 5856429065861370807}
   - component: {fileID: 8480610400472272223}
+  - component: {fileID: 2898624501917816420}
   - component: {fileID: 8362800950858403274}
   - component: {fileID: 5140138555973128359}
   - component: {fileID: 6967573133617385293}
   - component: {fileID: 4848808986914082503}
   m_Layer: 0
-  m_Name: Plane Item
+  m_Name: PlaneItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -51,7 +52,21 @@ MonoBehaviour:
   adUnitId: 
   allowImpression: 1
   loadOnStart: 1
+  interactable: 0
+  enableRefresh: 1
   refreshTime: 10
+--- !u!114 &2898624501917816420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6292186082032063765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 216f33292887b9141987e442a2c56c19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &8362800950858403274
 MonoBehaviour:
   m_ObjectHideFlags: 0
