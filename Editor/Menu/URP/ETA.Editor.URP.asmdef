@@ -1,0 +1,27 @@
+{
+    "name": "ETA.Editor.URP",
+    "rootNamespace": "ETA_Editor.Menu",
+    "references": [
+        "ETA",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "ETA_Implementation.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "URP_ENABLED"
+        }
+    ],
+    "noEngineReferences": false
+}

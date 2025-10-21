@@ -3,6 +3,7 @@ using System.Text;
 using ETA;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 // ReSharper disable once RedundantUsingDirective
 using System.IO;
@@ -10,7 +11,14 @@ using System.IO;
 namespace ETA_Editor.Menu
 {
     public class EasterAd : EditorWindow
-    { 
+    {
+        private enum RenderPipelineType
+        {
+            BuiltIn,
+            URP,
+            HDRP,
+            Unknown
+        }
 
         private bool _easterAdEnabled;
         private string _tempGameId = "";
@@ -28,9 +36,9 @@ namespace ETA_Editor.Menu
         private DeviceType _currentcustomDeviceType;
         private RuntimePlatform _currentcustomPlatform;
         private SystemLanguage _currentcustomLanguage;
-        
-        private Vector2 _scrollPosition=Vector2.zero;
-    
+
+        private Vector2 _scrollPosition = Vector2.zero;
+
         // Add menu item named "My Window" to the Window menu
         [MenuItem("Window/EasterAd")]
         private static void ShowWindow()
@@ -71,6 +79,11 @@ namespace ETA_Editor.Menu
 
         private void OnGUI()
         {
+            // Render Pipeline detection and Feature setup UI
+            DrawRenderPipelineSetupUI();
+
+            EditorGUILayout.Space();
+
             // Migration status check and notification
             bool hasLegacyAssets = EasterAdMigrationHelper.HasLegacyAssets();
             bool hasUnifiedShader = EasterAdMigrationHelper.HasUnifiedShader();
@@ -127,8 +140,8 @@ namespace ETA_Editor.Menu
                 }
             }
 
-            GUILayout.Label ("Base Settings", EditorStyles.boldLabel);
-            _easterAdEnabled = EditorGUILayout.BeginToggleGroup ("Enable EasterAd SDK", _easterAdEnabled);
+            GUILayout.Label("Base Settings", EditorStyles.boldLabel);
+            _easterAdEnabled = EditorGUILayout.BeginToggleGroup("Enable EasterAd SDK", _easterAdEnabled);
 
             EditorGUILayout.BeginHorizontal();
             _tempGameId = EditorGUILayout.TextField("Game ID", _tempGameId);
@@ -144,7 +157,7 @@ namespace ETA_Editor.Menu
 
             _tempLogEnable = EditorGUILayout.Toggle("Enable Log", _tempLogEnable);
 
-            _customInfoEnable = EditorGUILayout.BeginToggleGroup ("Custom Info", _customInfoEnable);
+            _customInfoEnable = EditorGUILayout.BeginToggleGroup("Custom Info", _customInfoEnable);
 
             EditorGUILayout.BeginHorizontal();
             _customDeviceType = (DeviceType)EditorGUILayout.EnumPopup("Device Type", _customDeviceType);
@@ -164,7 +177,7 @@ namespace ETA_Editor.Menu
             EditorGUILayout.LabelField(_currentcustomLanguage.ToString());
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.EndToggleGroup ();
+            EditorGUILayout.EndToggleGroup();
 
             if (GUILayout.Button("Save"))
             {
@@ -180,23 +193,23 @@ namespace ETA_Editor.Menu
             }
 
             EditorGUILayout.Space();
-            
-            
+
+
             EditorGUILayout.LabelField("List of Items", EditorStyles.boldLabel);
-            
+
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Index", GUILayout.Width(50));
             EditorGUILayout.LabelField("Item ID", GUILayout.Width(200));
-            EditorGUILayout.LabelField("Location",GUILayout.Width(150));
-            EditorGUILayout.LabelField("Status",GUILayout.Width(100));
-            EditorGUILayout.LabelField("Impression",GUILayout.Width(80));
-            EditorGUILayout.LabelField("Load On Start",GUILayout.Width(100));
-            EditorGUILayout.LabelField("Interactable",GUILayout.Width(80));
-            EditorGUILayout.LabelField("Interaction",GUILayout.Width(100));
-            EditorGUILayout.LabelField("",GUILayout.Width(20));
-            EditorGUILayout.LabelField("Refresh",GUILayout.Width(70));
+            EditorGUILayout.LabelField("Location", GUILayout.Width(150));
+            EditorGUILayout.LabelField("Status", GUILayout.Width(100));
+            EditorGUILayout.LabelField("Impression", GUILayout.Width(80));
+            EditorGUILayout.LabelField("Load On Start", GUILayout.Width(100));
+            EditorGUILayout.LabelField("Interactable", GUILayout.Width(80));
+            EditorGUILayout.LabelField("Interaction", GUILayout.Width(100));
+            EditorGUILayout.LabelField("", GUILayout.Width(20));
+            EditorGUILayout.LabelField("Refresh", GUILayout.Width(70));
             EditorGUILayout.LabelField("Remove", GUILayout.Width(75));
             EditorGUILayout.EndHorizontal();
 
@@ -206,20 +219,20 @@ namespace ETA_Editor.Menu
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField(index.ToString(), GUILayout.Width(50));
                 EditorGUILayout.LabelField(item.adUnitId, GUILayout.Width(200));
-                EditorGUILayout.LabelField(item.transform.position.ToString(),GUILayout.Width(150));
+                EditorGUILayout.LabelField(item.transform.position.ToString(), GUILayout.Width(150));
                 //Playmode 일때 상태 표시
-                if(Application.isPlaying)
+                if (Application.isPlaying)
                 {
-                    EditorGUILayout.LabelField(item.Client.GetStatus().ToString(),GUILayout.Width(100));
+                    EditorGUILayout.LabelField(item.Client.GetStatus().ToString(), GUILayout.Width(100));
                 }
                 else
                 {
-                    EditorGUILayout.LabelField("Editor Mode",GUILayout.Width(100));
+                    EditorGUILayout.LabelField("Editor Mode", GUILayout.Width(100));
                 }
                 item.allowImpression = GUILayout.Toggle(item.allowImpression, "", GUILayout.Width(80));
                 item.loadOnStart = GUILayout.Toggle(item.loadOnStart, "", GUILayout.Width(100));
                 item.interactable = GUILayout.Toggle(item.interactable, "", GUILayout.Width(80));
-                if(GUILayout.Button("Start", GUILayout.Width(50)))
+                if (GUILayout.Button("Start", GUILayout.Width(50)))
                 {
                     if (Application.isPlaying)
                     {
@@ -230,16 +243,16 @@ namespace ETA_Editor.Menu
                         }
                     }
                 }
-                if(GUILayout.Button("End", GUILayout.Width(50)))
+                if (GUILayout.Button("End", GUILayout.Width(50)))
                 {
                     if (Application.isPlaying)
                     {
                         item.EndInteraction();
                     }
                 }
-                EditorGUILayout.LabelField("",GUILayout.Width(20));
+                EditorGUILayout.LabelField("", GUILayout.Width(20));
                 item.enableRefresh = GUILayout.Toggle(item.enableRefresh, "", GUILayout.Width(70));
-                
+
                 if (GUILayout.Button("Remove", GUILayout.Width(75)))
                 {
                     DestroyImmediate(item.gameObject);
@@ -248,7 +261,7 @@ namespace ETA_Editor.Menu
                 index++;
             }
             EditorGUILayout.EndScrollView();
-            EditorGUILayout.EndToggleGroup ();
+            EditorGUILayout.EndToggleGroup();
 
             // Prefab section
             GUILayout.Label("Ad Prefab", EditorStyles.boldLabel);
@@ -340,6 +353,167 @@ namespace ETA_Editor.Menu
                 _currentcustomDeviceType = _customDeviceType;
                 _currentcustomPlatform = _customPlatform;
                 _currentcustomLanguage = _customLanguage;
+            }
+        }
+
+        /// <summary>
+        /// Render Pipeline 감지 및 Feature 설치 UI 표시
+        /// </summary>
+        private void DrawRenderPipelineSetupUI()
+        {
+            RenderPipelineType pipelineType = DetectRenderPipeline();
+
+            // URP이고 Feature가 설치되어 있으면 UI 숨김
+            if (pipelineType == RenderPipelineType.URP)
+            {
+                var featureManagerType = System.Type.GetType("ETA_Editor.Menu.AdSegmentationFeatureManager, ETA.Editor.URP");
+                if (featureManagerType != null)
+                {
+                    var isInstalledMethod = featureManagerType.GetMethod("IsFeatureInstalled",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    bool isFeatureInstalled = (bool)isInstalledMethod.Invoke(null, null);
+
+                    if (isFeatureInstalled)
+                    {
+                        // 설치 완료 → UI 표시 안 함
+                        return;
+                    }
+                }
+            }
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Render Pipeline Setup", EditorStyles.boldLabel);
+
+            switch (pipelineType)
+            {
+                case RenderPipelineType.URP:
+                    DrawURPSetupUI();
+                    break;
+
+                case RenderPipelineType.HDRP:
+                    EditorGUILayout.HelpBox(
+                        "🚧 HDRP Support Coming Soon\n" +
+                        "AdSegmentation feature for HDRP is under development.",
+                        MessageType.Info
+                    );
+                    break;
+
+                case RenderPipelineType.BuiltIn:
+                    EditorGUILayout.HelpBox(
+                        "🚧 Built-in Render Pipeline Support Coming Soon\n" +
+                        "AdSegmentation feature for Built-in RP is under development.",
+                        MessageType.Info
+                    );
+                    break;
+
+                case RenderPipelineType.Unknown:
+                    EditorGUILayout.HelpBox(
+                        "⚠ Unknown Render Pipeline\n" +
+                        "Could not detect the current render pipeline.",
+                        MessageType.Warning
+                    );
+                    break;
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        /// <summary>
+        /// URP 설정 UI 표시
+        /// </summary>
+        private void DrawURPSetupUI()
+        {
+            // Reflection으로 AdSegmentationFeatureManager 찾기
+            var featureManagerType = System.Type.GetType("ETA_Editor.Menu.AdSegmentationFeatureManager, ETA.Editor.URP");
+
+            if (featureManagerType == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "✅ Universal Render Pipeline (URP) Detected\n\n" +
+                    "⚠ URP Editor Assembly Not Found\n" +
+                    "The ETA.Editor.URP assembly is not loaded. " +
+                    "This is normal if URP package is not installed.",
+                    MessageType.Warning
+                );
+                return;
+            }
+
+            // IsFeatureInstalled() 메서드 호출
+            var isInstalledMethod = featureManagerType.GetMethod("IsFeatureInstalled",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            bool isFeatureInstalled = (bool)isInstalledMethod.Invoke(null, null);
+
+            if (!isFeatureInstalled)
+            {
+                // Feature가 설치되지 않음 → 자동 설치 시도
+                var installMethod = featureManagerType.GetMethod("InstallFeature",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                bool success = (bool)installMethod.Invoke(null, null);
+
+                if (!success)
+                {
+                    // 자동 설치 실패 → 수동 안내 표시
+                    EditorGUILayout.BeginVertical("box");
+                    EditorGUILayout.HelpBox(
+                        "⚠ AdSegmentation Renderer Feature Auto-Installation Failed\n\n" +
+                        "The feature could not be installed automatically.\n" +
+                        "Please check the Console for error messages and try manual installation.",
+                        MessageType.Error
+                    );
+
+                    if (GUILayout.Button("Retry Installation", GUILayout.Height(30)))
+                    {
+                        bool retrySuccess = (bool)installMethod.Invoke(null, null);
+                        if (retrySuccess)
+                        {
+                            EditorUtility.DisplayDialog(
+                                "Installation Complete",
+                                "AdSegmentation Renderer Feature has been installed successfully!",
+                                "OK"
+                            );
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog(
+                                "Installation Failed",
+                                "Failed to install AdSegmentation Renderer Feature.\n" +
+                                "Please check the Console for error messages.",
+                                "OK"
+                            );
+                        }
+                    }
+                    EditorGUILayout.EndVertical();
+                }
+                // 자동 설치 성공 → UI 표시 안 함 (다음 프레임에 사라짐)
+            }
+            // Feature 설치됨 → UI 표시 안 함
+        }
+
+        /// <summary>
+        /// 현재 활성화된 Render Pipeline 감지
+        /// </summary>
+        private RenderPipelineType DetectRenderPipeline()
+        {
+            var currentPipeline = GraphicsSettings.currentRenderPipeline;
+
+            if (currentPipeline == null)
+            {
+                return RenderPipelineType.BuiltIn;
+            }
+
+            string pipelineTypeName = currentPipeline.GetType().Name;
+
+            if (pipelineTypeName.Contains("Universal"))
+            {
+                return RenderPipelineType.URP;
+            }
+            else if (pipelineTypeName.Contains("HDRenderPipeline") || pipelineTypeName.Contains("HDRP"))
+            {
+                return RenderPipelineType.HDRP;
+            }
+            else
+            {
+                return RenderPipelineType.Unknown;
             }
         }
     }

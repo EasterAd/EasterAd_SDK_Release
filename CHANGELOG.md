@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2025.10.21
+
+### Fixed
+
+-   Streamlined early return logic in MinSizeAndPixelRequirementFilter for improved code clarity
+
+### Added
+
+-   Added GPU-based ad visibility measurement system using compute shaders and segmentation rendering
+-   Added AdSegmentationManager for automatic ID assignment and management of ad objects
+-   Added URP support with AdSegmentationFeatureManager and render pipeline integration
+-   Added comprehensive impression logging with detailed visibility metrics (areaVisible, visibleRatio)
+-   Added pixel counting implementation with ComputeBuffer management
+-   Added GPU-based visibility filtering replacing traditional raycast approach
+
 ## [1.2.2] - 2025.10.12
 
 ### Fixed
