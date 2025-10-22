@@ -62,15 +62,6 @@ namespace ETA_Editor.Menu
             // RendererData에 추가
             Undo.RecordObject(rendererData, "Add EasterAd Feature");
 
-            // Reflection을 사용하여 내부 리스트에 추가
-            var featuresList = rendererData.rendererFeatures;
-            var newFeaturesList = new ScriptableRendererFeature[featuresList.Count + 1];
-            for (int i = 0; i < featuresList.Count; i++)
-            {
-                newFeaturesList[i] = featuresList[i];
-            }
-            newFeaturesList[featuresList.Count] = feature;
-
             // SerializedObject를 통해 안전하게 추가
             var serializedObject = new SerializedObject(rendererData);
             var featuresProperty = serializedObject.FindProperty("m_RendererFeatures");
@@ -81,12 +72,13 @@ namespace ETA_Editor.Menu
 
             serializedObject.ApplyModifiedProperties();
 
-            // Asset으로 저장
+            // Feature를 RendererData의 서브애셋으로 추가
             AssetDatabase.AddObjectToAsset(feature, rendererData);
-            AssetDatabase.SaveAssets();
 
+            // RendererData만 저장 (중요: SaveAssets() 대신 특정 애셋만 저장)
             EditorUtility.SetDirty(rendererData);
-            AssetDatabase.Refresh();
+            string rendererPath = AssetDatabase.GetAssetPath(rendererData);
+            AssetDatabase.SaveAssetIfDirty(rendererData);
 
             Debug.Log($"[EasterAd] Feature installed successfully to {AssetDatabase.GetAssetPath(rendererData)}");
             Debug.Log($"[EasterAd] Feature type: {feature.GetType().FullName}");
@@ -135,9 +127,9 @@ namespace ETA_Editor.Menu
             // Asset 제거 (먼저 Object 삭제, 그 다음 Asset 제거)
             UnityEngine.Object.DestroyImmediate(featureToRemove, true);
 
+            // RendererData만 저장 (중요: SaveAssets() 대신 특정 애셋만 저장)
             EditorUtility.SetDirty(rendererData);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            AssetDatabase.SaveAssetIfDirty(rendererData);
 
             return true;
         }
