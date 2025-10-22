@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using ETA_Dependencies.Unity;
 using UnityEngine;
@@ -15,27 +16,60 @@ namespace ETA
     {
         protected ItemClient _client = null!;
         public ItemClient Client => _client;
-        
+
         public string adUnitId = null!; //must be set in Unity Editor
+
+        /// <summary>
+        /// <para xml:lang="ko">Awake에서 자동으로 초기화할지 여부를 결정합니다. false로 설정하면 수동으로 초기화해야 합니다.</para>
+        /// <para xml:lang="en">Determines whether to automatically initialize in Awake. If set to false, manual initialization is required.</para>
+        /// </summary>
+        public bool autoInitialize = true;
+
         public bool allowImpression = true;
         public bool loadOnStart = true;
         public bool interactable;
         public bool enableRefresh = true;
         public float refreshTime = 10.0f;
-        
+
         private bool _startRefresh;
         private float _refreshWaited;
-        
+        private bool _isInitialized = false;
+
 
         internal void Awake() // todo change Destroy process
         {
-            if(EasterAdSdk.OnceInitialized == false)
+            if (EasterAdSdk.OnceInitialized == false)
             {
                 EasterAdSdk.ItemAwakeQueue.Enqueue(this);
                 EnableSDK();
                 return;
             }
-            
+
+            // autoInitialize가 true이고 adUnitId가 설정된 경우에만 자동 초기화
+            if (autoInitialize && !string.IsNullOrEmpty(adUnitId))
+            {
+                InitializeItemClient();
+            }
+        }
+
+        /// <summary>
+        /// <para xml:lang="ko">ItemClient를 초기화합니다.</para>
+        /// <para xml:lang="en">Initializes the ItemClient.</para>
+        /// </summary>
+        private void InitializeItemClient()
+        {
+            if (!EasterAdSdk.OnceInitialized)
+            {
+                InstanceManager.DebugLogger.LogWarning("EasterAdSdk is not initialized yet. Postponing Item initialization.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(adUnitId))
+            {
+                InstanceManager.DebugLogger.LogWarning("adUnitId is empty. Cannot initialize Item.");
+                return;
+            }
+
             if (EasterAdSdk.Instance.GetItemClient(adUnitId) != null)
             {
                 InstanceManager.DebugLogger.Log("Item already exist: " + adUnitId);
@@ -45,6 +79,7 @@ namespace ETA
             _client.AllowImpression = allowImpression;
             _client.Interactable = interactable;
             EasterAdSdk.Instance.AddItemClient(adUnitId, ref _client);
+            _isInitialized = true;
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
         }
 
@@ -52,15 +87,18 @@ namespace ETA
         {
             if (loadOnStart) { Load(); }
         }
-        
+
         private void Update()
         {
-            _client.AllowImpression=allowImpression;
-            _client.Interactable=interactable;
-            
+            // client가 없으면 Update 스킵
+            if (_client == null) return;
+
+            _client.AllowImpression = allowImpression;
+            _client.Interactable = interactable;
+
             if (!enableRefresh) { return; }
-            
-            if(_startRefresh)
+
+            if (_startRefresh)
             {
                 _refreshWaited += Time.unscaledDeltaTime;
                 if (_refreshWaited >= refreshTime)
@@ -90,7 +128,8 @@ namespace ETA
 
         private void OnDestroy()
         {
-            try{
+            try
+            {
                 EasterAdSdk.Instance.RemoveItemClient(adUnitId);
             }
             catch
@@ -101,11 +140,67 @@ namespace ETA
 
 
         /// <summary>
+        /// <para xml:lang="ko">런타임에 adUnitId를 설정하고 Item을 수동으로 초기화합니다.</para>
+        /// <para xml:lang="en">Sets the adUnitId at runtime and manually initializes the Item.</para>
+        /// </summary>
+        /// <param name="newAdUnitId">
+        /// <para xml:lang="ko">설정할 광고 단위 ID입니다.</para>
+        /// <para xml:lang="en">The ad unit ID to set.</para>
+        /// </param>
+        public void InitializeWithAdUnitId(string newAdUnitId)
+        {
+            if (_isInitialized && _client != null)
+            {
+                // 기존 client 정리
+                try
+                {
+                    EasterAdSdk.Instance.RemoveItemClient(adUnitId);
+                    InstanceManager.DebugLogger.Log($"Removed existing Item client: {adUnitId}");
+                }
+                catch (Exception ex)
+                {
+                    InstanceManager.DebugLogger.LogWarning($"Failed to remove existing client: {ex.Message}");
+                }
+            }
+
+            adUnitId = newAdUnitId;
+            _isInitialized = false;
+            InitializeItemClient();
+        }
+
+        /// <summary>
+        /// <para xml:lang="ko">현재 설정된 adUnitId로 Item을 수동으로 초기화합니다.</para>
+        /// <para xml:lang="en">Manually initializes the Item with the currently set adUnitId.</para>
+        /// </summary>
+        public void Initialize()
+        {
+            if (string.IsNullOrEmpty(adUnitId))
+            {
+                InstanceManager.DebugLogger.LogWarning("adUnitId is not set. Call InitializeWithAdUnitId() or set adUnitId first.");
+                return;
+            }
+
+            if (_isInitialized && _client != null)
+            {
+                InstanceManager.DebugLogger.LogWarning($"Item {adUnitId} is already initialized.");
+                return;
+            }
+
+            InitializeItemClient();
+        }
+
+        /// <summary>
+        /// <para xml:lang="ko">Item이 초기화되었는지 확인합니다.</para>
+        /// <para xml:lang="en">Checks if the Item is initialized.</para>
+        /// </summary>
+        public bool IsInitialized => _isInitialized && _client != null;
+
+        /// <summary>
         /// <para xml:lang="ko">서버에서 광고를 로드하고 표시합니다.</para>
         /// <para xml:lang="en">Load Ad from server and show if.</para>
         /// </summary>
         public abstract void Load();
-        
+
         // /// <summary>
         // /// <para xml:lang="ko">텍스처를 일반 텍스처로 변경합니다.</para>
         // /// <para xml:lang="en">Change texture to general texture.</para>
@@ -144,7 +239,7 @@ namespace ETA
         // {
         //     Client.Destroy();
         // }
-        
+
         public abstract string StartInteraction();
         public abstract void EndInteraction();
 
@@ -154,16 +249,16 @@ namespace ETA
         /// </summary>
         protected abstract ItemClient GetClient(GameObject clientObject, string adUnitId);
 
-        
+
         private void EnableSDK()
         {
             string filename = "ETA_Config.txt";
             string filepath = Path.Combine(Application.streamingAssetsPath, filename);
             if (File.Exists(filepath) == false) { return; }
-            
+
             string[] config = File.ReadAllLines(filepath);
             bool easterAdEnabled = bool.Parse(config[0]);
-            
+
             if (easterAdEnabled)
             {
                 EasterAdSdk.CreateEtaSdk();
