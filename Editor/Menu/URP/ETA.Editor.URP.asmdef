@@ -3,6 +3,7 @@
     "rootNamespace": "ETA_Editor.Menu",
     "references": [
         "ETA",
+        "ETA.AdSegmentation.URP",
         "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [

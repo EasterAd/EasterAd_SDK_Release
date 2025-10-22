@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2025.10.22
+
+### Fixed
+
+-   Fixed camera synchronization between EasterAdSDK and CameraManager for multi-camera environments
+-   Fixed RendererFeature installation failure that resulted in "Missing RendererFeature" by using direct type reference
+
+### Changed
+
+-   Refactored camera API - targetCamera property now internally handles CameraManager synchronization
+-   Deprecated SetCamera() method in favor of cleaner targetCamera property approach
+-   Simplified Update() logic by removing redundant camera synchronization code
+-   Improved GetGlobalTargetCamera() with try-catch for Editor mode stability
+
+### Removed
+
+-   Removed unused Settings class from AdSegmentationRendererFeature and AdSegmentationScriptableRenderPass
+-   Removed legacy manual camera synchronization code from Update() method
+
 ## [1.3.0] - 2025.10.21
 
 ### Fixed

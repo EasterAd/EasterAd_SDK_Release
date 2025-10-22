@@ -1,10 +1,10 @@
 // ReSharper disable once RedundantNullableDirective
 #nullable enable
+using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using ETA_Implementation;
-using System;
-using System.IO;
 using ETA_Implementation.Library;
 using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
 using GameObject = UnityEngine.GameObject;
@@ -36,11 +36,28 @@ namespace ETA
         public static bool OnceInitialized { get; private set; }
 
         private static string _configFilePath = Path.Combine(Application.streamingAssetsPath, "ETA_Config.txt");
+        private Camera? _targetCamera;  // Internal camera storage
+
         /// <summary>
         /// <para xml:lang="ko">SDK가 사용할 대상 카메라입니다. 설정되지 않은 경우 자동으로 <c>Camera.main</c>을 시도합니다.</para>
         /// <para xml:lang="en">The target camera used by the SDK. If not set, it will try to use <c>Camera.main</c> automatically.</para>
         /// </summary>
-        public Camera? targetCamera;
+        public Camera? targetCamera
+        {
+            get => _targetCamera;
+            set
+            {
+                if (_targetCamera != value)
+                {
+                    _targetCamera = value;
+                    if (value != null)
+                    {
+                        // Directly synchronize with CameraManager when camera is set
+                        InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(value.gameObject).Camera);
+                    }
+                }
+            }
+        }
         internal string GameId = "";
         internal string sdkKey = "";
         internal bool logEnable;
@@ -112,9 +129,10 @@ namespace ETA
         /// <para xml:lang="ko">SDK가 사용할 Unity 카메라 인스턴스.</para>
         /// <para xml:lang="en">The Unity camera instance to be used by the SDK.</para>
         /// </param>
+        [Obsolete("Use targetCamera property instead. This method will be removed in a future version.")]
         public void SetCamera(Camera userCamera)
         {
-            InstanceManager.CameraManager.SetMainCamera(new ETA_Dependencies.Unity.GameObject(userCamera.gameObject).Camera);
+            targetCamera = userCamera;
         }
 
         private void RefreshConfig()
@@ -173,13 +191,10 @@ namespace ETA
             InstanceManager.UI.UpdateCurrentGameDisplay();
 #endif
 
+            // Auto-detect Camera.main if targetCamera is not set
             if (targetCamera == null)
             {
                 targetCamera = Camera.main;
-                if (targetCamera != null)
-                {
-                    SetCamera(targetCamera);
-                }
             }
 
             _time += Time.deltaTime;
@@ -233,7 +248,13 @@ namespace ETA
                 _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey, CustomDeviceType, CustomPlatform, CustomLanguage);
             else
                 _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey);
-            if (targetCamera != null) { SetCamera(targetCamera); }
+            if (_targetCamera != null)
+            {
+                // Force sync with CameraManager after initialization
+                var cam = _targetCamera;
+                _targetCamera = null;  // Force change detection
+                targetCamera = cam;     // Trigger property setter
+            }
             _easterAdSdkClient.AxesNames = GetAxesNames();
             OnceInitialized = true;
         }
