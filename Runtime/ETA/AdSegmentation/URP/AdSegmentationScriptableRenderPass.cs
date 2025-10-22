@@ -11,7 +11,6 @@ namespace ETA
         private Material material;
         private ComputeShader pixelCounterCS;
         private int kernelIndex;
-        private AdSegmentationRendererFeature.Settings settings;
         private ComputeBuffer pixelCountBuffer;
         private RTHandle segmentationRTHandle;
         private RTHandle segmentationDepthHandle;
@@ -22,12 +21,10 @@ namespace ETA
         public AdSegmentationScriptableRenderPass(
             Material material,
             ComputeShader pixelCounterCS,
-            AdSegmentationRendererFeature.Settings settings,
             ComputeBuffer pixelCountBuffer)
         {
             this.material = material;
             this.pixelCounterCS = pixelCounterCS;
-            this.settings = settings;
             this.pixelCountBuffer = pixelCountBuffer;
 
             // Compute Shader 커널 인덱스 가져오기

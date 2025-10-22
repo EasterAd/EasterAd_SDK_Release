@@ -3,6 +3,8 @@ using UnityEditor;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Linq;
+using System;
+using ETA; // For AdSegmentationRendererFeature type
 
 namespace ETA_Editor.Menu
 {
@@ -21,7 +23,8 @@ namespace ETA_Editor.Menu
             var rendererData = GetCurrentRendererData();
             if (rendererData == null) return false;
 
-            return rendererData.rendererFeatures.Any(f => f != null && f.GetType().Name == FeatureName);
+            // 타입으로 직접 비교
+            return rendererData.rendererFeatures.Any(f => f != null && f is AdSegmentationRendererFeature);
         }
 
         /// <summary>
@@ -43,14 +46,17 @@ namespace ETA_Editor.Menu
                 return true;
             }
 
-            // RendererFeature 생성
-            var feature = ScriptableObject.CreateInstance("AdSegmentationRendererFeature") as ScriptableRendererFeature;
-            if (feature == null)
+            // RendererFeature 생성 - 직접 타입 사용
+            AdSegmentationRendererFeature feature = null;
+            try
             {
-                Debug.LogError("[EasterAd] Failed to create AdSegmentationRendererFeature. Is the script compiled?");
+                feature = ScriptableObject.CreateInstance<AdSegmentationRendererFeature>();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[EasterAd] Failed to create AdSegmentationRendererFeature: {e.Message}");
                 return false;
             }
-
             feature.name = FeatureName;
 
             // RendererData에 추가
@@ -83,6 +89,7 @@ namespace ETA_Editor.Menu
             AssetDatabase.Refresh();
 
             Debug.Log($"[EasterAd] Feature installed successfully to {AssetDatabase.GetAssetPath(rendererData)}");
+            Debug.Log($"[EasterAd] Feature type: {feature.GetType().FullName}");
             return true;
         }
 
@@ -94,8 +101,9 @@ namespace ETA_Editor.Menu
             var rendererData = GetCurrentRendererData();
             if (rendererData == null) return false;
 
+            // 타입으로 직접 찾기
             var featureToRemove = rendererData.rendererFeatures
-                .FirstOrDefault(f => f != null && f.GetType().Name == FeatureName);
+                .FirstOrDefault(f => f != null && f is AdSegmentationRendererFeature);
 
             if (featureToRemove == null)
             {
@@ -125,7 +133,7 @@ namespace ETA_Editor.Menu
             serializedObject.ApplyModifiedProperties();
 
             // Asset 제거 (먼저 Object 삭제, 그 다음 Asset 제거)
-            Object.DestroyImmediate(featureToRemove, true);
+            UnityEngine.Object.DestroyImmediate(featureToRemove, true);
 
             EditorUtility.SetDirty(rendererData);
             AssetDatabase.SaveAssets();

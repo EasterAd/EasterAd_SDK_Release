@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -7,17 +8,6 @@ namespace ETA
 {
     public class AdSegmentationRendererFeature : ScriptableRendererFeature
     {
-        [System.Serializable]
-        public class Settings
-        {
-            [Tooltip("Target camera for segmentation rendering. If null, uses Camera.main (supports VR main camera)")]
-            public Camera targetCamera;
-
-            [Tooltip("Optional render texture for debugging. Leave null for automatic creation")]
-            public RenderTexture segmentationRenderTexture;
-        }
-
-        [SerializeField] public Settings settings = new Settings();
         private AdSegmentationScriptableRenderPass renderPass;
         private ComputeBuffer _pixelCountBuffer;
         private const int BufferSize = 256;
@@ -53,7 +43,7 @@ namespace ETA
             _pixelCountBuffer = new ComputeBuffer(BufferSize, sizeof(uint), ComputeBufferType.Default);
 
             // RenderPass 생성 (Material + ComputeShader + Buffer 전달)
-            renderPass = new AdSegmentationScriptableRenderPass(material, pixelCounterCS, settings, _pixelCountBuffer);
+            renderPass = new AdSegmentationScriptableRenderPass(material, pixelCounterCS, _pixelCountBuffer);
             renderPass.renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
 
             // RendererFeature 등록
@@ -66,7 +56,13 @@ namespace ETA
             if (renderPass == null || _pixelCountBuffer == null)
                 return;
 
-            Camera targetCam = settings.targetCamera != null ? settings.targetCamera : Camera.main;
+            // VR Note: This implementation processes only the target camera configured in EasterAdSDK.
+            // In VR mode, this will naturally process once per frame regardless of stereo rendering mode.
+            // This approach avoids buffer conflicts and URP version compatibility issues with XRPass.eyeIndex.
+            // Future enhancement: Add conditional VR-specific handling if needed.
+
+            // Get global camera from EasterAdSdk
+            Camera targetCam = GetGlobalTargetCamera();
 
             if (targetCam != null && renderingData.cameraData.camera == targetCam)
             {
@@ -76,6 +72,30 @@ namespace ETA
                 var adSegManager = InstanceManager.AdSegmentationManager;
                 adSegManager.UpdatePixelCounts(_pixelCountBuffer);
             }
+        }
+
+        /// <summary>
+        /// Gets the global target camera from EasterAdSdk.
+        /// Priority: EasterAdSdk.targetCamera > Camera.main
+        /// </summary>
+        private Camera GetGlobalTargetCamera()
+        {
+            // Try to get the EasterAdSdk instance safely
+            try
+            {
+                // Use global camera from EasterAdSdk (synchronized with CameraManager through Update())
+                if (EasterAdSdk.Instance != null && EasterAdSdk.Instance.targetCamera != null)
+                {
+                    return EasterAdSdk.Instance.targetCamera;
+                }
+            }
+            catch (Exception)
+            {
+                // SDK is not enabled, fallback to Camera.main
+            }
+
+            // Fallback: Camera.main
+            return Camera.main;
         }
 
         protected override void Dispose(bool disposing)
