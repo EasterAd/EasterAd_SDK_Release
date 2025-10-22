@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2025.10.22
+
+### Added
+
+-   Added lazy initialization option for Item components to allow adUnitId post-initialization setup
+
 ## [1.3.2] - 2025.10.22
 
 ### Fixed
