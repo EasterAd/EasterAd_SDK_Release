@@ -85,7 +85,7 @@ namespace ETA
 
         private void Start()
         {
-            if (loadOnStart) { Load(); }
+            if (loadOnStart && _client != null) { Load(); }
         }
 
         private void Update()

@@ -62,11 +62,6 @@ namespace ETA
         internal string sdkKey = "";
         internal bool logEnable;
 
-        internal bool CustomInfoEnabled;
-        internal int CustomDeviceType = -1;
-        internal string CustomPlatform = "";
-        internal string CustomLanguage = "";
-
         internal static readonly Queue<Item> ItemAwakeQueue = new Queue<Item>();
 
         /// <summary>
@@ -143,20 +138,6 @@ namespace ETA
             GameId = config[1];
             sdkKey = config[2];
             logEnable = bool.Parse(config[3]);
-            if (bool.Parse(config[4]))
-            {
-                CustomInfoEnabled = true;
-                CustomDeviceType = DeviceTypeCode((DeviceType)Enum.Parse(typeof(DeviceType), config[5]));
-                CustomPlatform = PlatformCode((RuntimePlatform)Enum.Parse(typeof(RuntimePlatform), config[6]));
-                CustomLanguage = LanguageCode((SystemLanguage)Enum.Parse(typeof(SystemLanguage), config[7]));
-            }
-            else
-            {
-                CustomInfoEnabled = false;
-                CustomDeviceType = -1;
-                CustomPlatform = "";
-                CustomLanguage = "";
-            }
         }
 
         private EasterAdSdk()
@@ -244,10 +225,7 @@ namespace ETA
                 Debug.Log("EtaSdk is already initialized");
                 return;
             }
-            if (CustomInfoEnabled)
-                _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey, CustomDeviceType, CustomPlatform, CustomLanguage);
-            else
-                _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey);
+            _easterAdSdkClient!.Initialize(GameId, logEnable, sdkKey);
             if (_targetCamera != null)
             {
                 // Force sync with CameraManager after initialization
@@ -265,8 +243,7 @@ namespace ETA
         {
             RefreshConfig();
 
-            if (CustomInfoEnabled) _easterAdSdkClient!.ReInitialize(logEnable, CustomDeviceType, CustomPlatform, CustomLanguage);
-            else _easterAdSdkClient!.ReInitialize(logEnable);
+            _easterAdSdkClient!.ReInitialize(logEnable);
         }
 
         /// <summary>
@@ -388,81 +365,6 @@ namespace ETA
             axesNames.AddRange(axesNamesArr);
             return axesNames;
 #endif
-        }
-
-        private static string LanguageCode(SystemLanguage language)
-        {
-            return language switch
-            {
-                SystemLanguage.Afrikaans => "af",
-                SystemLanguage.Arabic => "ar",
-                SystemLanguage.Basque => "eu",
-                SystemLanguage.Belarusian => "be",
-                SystemLanguage.Bulgarian => "bg",
-                SystemLanguage.Catalan => "ca",
-                SystemLanguage.Chinese => "zh",
-                SystemLanguage.Czech => "cs",
-                SystemLanguage.Danish => "da",
-                SystemLanguage.Dutch => "nl",
-                SystemLanguage.English => "en",
-                SystemLanguage.Estonian => "et",
-                SystemLanguage.Faroese => "fo",
-                SystemLanguage.Finnish => "fi",
-                SystemLanguage.French => "fr",
-                SystemLanguage.German => "de",
-                SystemLanguage.Greek => "el",
-                SystemLanguage.Hebrew => "he",
-                SystemLanguage.Hungarian => "hu",
-                SystemLanguage.Icelandic => "is",
-                SystemLanguage.Indonesian => "id",
-                SystemLanguage.Italian => "it",
-                SystemLanguage.Japanese => "ja",
-                SystemLanguage.Korean => "ko",
-                SystemLanguage.Latvian => "lv",
-                SystemLanguage.Lithuanian => "lt",
-                SystemLanguage.Norwegian => "no",
-                SystemLanguage.Polish => "pl",
-                SystemLanguage.Portuguese => "pt",
-                SystemLanguage.Romanian => "ro",
-                SystemLanguage.Russian => "ru",
-                SystemLanguage.SerboCroatian => "sh",
-                SystemLanguage.Slovak => "sk",
-                SystemLanguage.Slovenian => "sl",
-                SystemLanguage.Spanish => "es",
-                SystemLanguage.Swedish => "sv",
-                SystemLanguage.Thai => "th",
-                SystemLanguage.Turkish => "tr",
-                SystemLanguage.Ukrainian => "uk",
-                SystemLanguage.Vietnamese => "vi",
-                SystemLanguage.ChineseSimplified => "zh",
-                SystemLanguage.ChineseTraditional => "zh",
-                _ => "en"
-            };
-        }
-
-        private static string PlatformCode(RuntimePlatform platform)
-        {
-            return platform switch
-            {
-                RuntimePlatform.WindowsPlayer => "Windows",
-                RuntimePlatform.WindowsEditor => "WindowsEditor",
-                RuntimePlatform.LinuxEditor => "LinuxEditor",
-                RuntimePlatform.OSXEditor => "OSXEditor",
-                RuntimePlatform.Android => "Android",
-                RuntimePlatform.IPhonePlayer => "iOS",
-                _ => Application.platform.ToString()
-            };
-        }
-
-        private static int DeviceTypeCode(DeviceType deviceType)
-        {
-            return deviceType switch
-            {
-                DeviceType.Desktop => 2,
-                DeviceType.Handheld => 1,
-                DeviceType.Console => 6,
-                _ => 1
-            };
         }
 
     }

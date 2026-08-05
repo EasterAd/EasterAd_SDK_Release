@@ -4,6 +4,12 @@ This is the EasterAd SDK for Unity.
 
 한글 README는 [여기](README.ko.md)에서 확인할 수 있습니다.
 
+## Requirements
+
+- Unity 6000.0 or later
+- Universal Render Pipeline (URP)
+- Windows, Android, or iOS
+
 ## Installation
 
 ### From Git Repository

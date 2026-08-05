@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor.PackageManager;
@@ -79,6 +80,38 @@ namespace EasterAd.Tests.EditMode
                     new Regex("MissingComponentException: There is no 'Renderer' attached"));
 
                 unityObject.AddComponent<ETA.MaterialManager>();
+            }
+            finally
+            {
+                if (unityObject != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(unityObject);
+                }
+            }
+        }
+
+        [Test]
+        public void UninitializedPlaneIgnoresRuntimeActions()
+        {
+            GameObject unityObject = null;
+
+            try
+            {
+                unityObject = new GameObject("EasterAd uninitialized plane");
+                ETA.Plane plane = unityObject.AddComponent<ETA.Plane>();
+                MethodInfo startMethod = typeof(ETA.Item).GetMethod(
+                    "Start", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                Assert.That(startMethod, Is.Not.Null,
+                    "Item must retain the runtime Start callback that handles automatic loading.");
+                Assert.DoesNotThrow(() => startMethod.Invoke(plane, null),
+                    "An Item with no initialized client must not load when its Start callback runs.");
+                Assert.DoesNotThrow(plane.Load,
+                    "Calling Load before SDK item initialization must not throw.");
+                Assert.That(plane.StartInteraction(), Is.Empty,
+                    "An uninitialized item must not report an interaction URL.");
+                Assert.DoesNotThrow(plane.EndInteraction,
+                    "Ending interaction before SDK item initialization must not throw.");
             }
             finally
             {

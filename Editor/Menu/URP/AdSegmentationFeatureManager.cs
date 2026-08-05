@@ -23,6 +23,8 @@ namespace ETA_Editor.Menu
             var rendererData = GetCurrentRendererData();
             if (rendererData == null) return false;
 
+            RemoveTrailingEmptyFeatureEntries(rendererData);
+
             // 타입으로 직접 비교
             return rendererData.rendererFeatures.Any(f => f != null && f is AdSegmentationRendererFeature);
         }
@@ -59,21 +61,35 @@ namespace ETA_Editor.Menu
             }
             feature.name = FeatureName;
 
-            // RendererData에 추가
-            Undo.RecordObject(rendererData, "Add EasterAd Feature");
+            Undo.RegisterCreatedObjectUndo(feature, "Add EasterAd Feature");
 
-            // SerializedObject를 통해 안전하게 추가
             var serializedObject = new SerializedObject(rendererData);
             var featuresProperty = serializedObject.FindProperty("m_RendererFeatures");
+            var featureMapProperty = serializedObject.FindProperty("m_RendererFeatureMap");
+            if (featuresProperty == null || featureMapProperty == null)
+            {
+                Debug.LogError("[EasterAd] The active URP renderer does not expose renderer feature properties.");
+                UnityEngine.Object.DestroyImmediate(feature);
+                return false;
+            }
+
+            AssetDatabase.AddObjectToAsset(feature, rendererData);
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(feature, out _, out long localId))
+            {
+                Debug.LogError("[EasterAd] Failed to register the renderer feature in the active URP renderer.");
+                UnityEngine.Object.DestroyImmediate(feature, true);
+                return false;
+            }
 
             featuresProperty.arraySize++;
             var newFeatureProperty = featuresProperty.GetArrayElementAtIndex(featuresProperty.arraySize - 1);
             newFeatureProperty.objectReferenceValue = feature;
 
-            serializedObject.ApplyModifiedProperties();
+            featureMapProperty.arraySize++;
+            var newFeatureMapProperty = featureMapProperty.GetArrayElementAtIndex(featureMapProperty.arraySize - 1);
+            newFeatureMapProperty.longValue = localId;
 
-            // Feature를 RendererData의 서브애셋으로 추가
-            AssetDatabase.AddObjectToAsset(feature, rendererData);
+            serializedObject.ApplyModifiedProperties();
 
             // RendererData만 저장 (중요: SaveAssets() 대신 특정 애셋만 저장)
             EditorUtility.SetDirty(rendererData);
@@ -108,16 +124,24 @@ namespace ETA_Editor.Menu
             // SerializedObject를 통해 제거
             var serializedObject = new SerializedObject(rendererData);
             var featuresProperty = serializedObject.FindProperty("m_RendererFeatures");
+            var featureMapProperty = serializedObject.FindProperty("m_RendererFeatureMap");
+            if (featuresProperty == null || featureMapProperty == null)
+            {
+                Debug.LogError("[EasterAd] The active URP renderer does not expose renderer feature properties.");
+                return false;
+            }
 
             for (int i = featuresProperty.arraySize - 1; i >= 0; i--)
             {
                 var element = featuresProperty.GetArrayElementAtIndex(i);
                 if (element.objectReferenceValue == featureToRemove)
                 {
-                    // 첫 번째 호출: 참조를 null로 설정
+                    element.objectReferenceValue = null;
                     featuresProperty.DeleteArrayElementAtIndex(i);
-                    // 두 번째 호출: 배열에서 항목 제거
-                    featuresProperty.DeleteArrayElementAtIndex(i);
+                    if (i < featureMapProperty.arraySize)
+                    {
+                        featureMapProperty.DeleteArrayElementAtIndex(i);
+                    }
                     break;
                 }
             }
@@ -162,6 +186,46 @@ namespace ETA_Editor.Menu
             var rendererData = rendererDataProperty.objectReferenceValue as UniversalRendererData;
 
             return rendererData;
+        }
+
+        private static void RemoveTrailingEmptyFeatureEntries(UniversalRendererData rendererData)
+        {
+            var serializedObject = new SerializedObject(rendererData);
+            var featuresProperty = serializedObject.FindProperty("m_RendererFeatures");
+            var featureMapProperty = serializedObject.FindProperty("m_RendererFeatureMap");
+            if (featuresProperty == null || featureMapProperty == null)
+            {
+                return;
+            }
+
+            bool changed = false;
+            for (int i = featuresProperty.arraySize - 1; i >= 0; i--)
+            {
+                if (featuresProperty.GetArrayElementAtIndex(i).objectReferenceValue != null)
+                {
+                    break;
+                }
+
+                featuresProperty.DeleteArrayElementAtIndex(i);
+                if (i < featureMapProperty.arraySize)
+                {
+                    featureMapProperty.DeleteArrayElementAtIndex(i);
+                }
+                changed = true;
+            }
+
+            while (featureMapProperty.arraySize > featuresProperty.arraySize)
+            {
+                featureMapProperty.DeleteArrayElementAtIndex(featureMapProperty.arraySize - 1);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                serializedObject.ApplyModifiedProperties();
+                EditorUtility.SetDirty(rendererData);
+                AssetDatabase.SaveAssetIfDirty(rendererData);
+            }
         }
 
         /// <summary>
