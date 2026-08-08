@@ -2,11 +2,56 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+-   Added Dashboard integration in `Window > EasterAd` to connect with the EasterAd Developer Dashboard by API key and apply dashboard Game ID, SDK Key, and Ad Unit IDs to Unity SDK settings and placements.
+-   Added unified Inventory and Placement management in `Window > EasterAd`, where scene-placed inventory is Active and unplaced inventory is shown in Archive.
+-   Added Managed Scenes in `Window > EasterAd` Settings to scope duplicate Ad Unit ID scans, auto-add placement scenes, and prune scenes with no EasterAd placements.
+-   Added sidebar Menu Settings to arrange predefined dashboard components into folders through a single-line drag-and-drop list.
+-   Added automatic runtime bootstrapping from `Window > EasterAd` SDK settings.
+-   Added Window-based SDK and placement management for Plane and CanvasItem ads.
+
+### Changed
+
+-   Redesigned `Window > EasterAd` as a UI Toolkit console aligned with the EasterAd web dashboard layout, colors, and folder/component structure.
+-   Moved dashboard API key, organization, and game selection into Settings and persist the selected dashboard project in EditorPrefs.
+-   Changed dashboard data updates to run when the window opens, tabs/settings are used, dashboard project selection changes, or the error banner's Refresh button is pressed instead of on a fixed interval.
+-   Hid normal dashboard update progress and success states from the UI so only actionable update failures or paused states are shown.
+-   Updated Menu Settings dragging so the dragged component leaves the list, stays as a floating preview, and opens a real spacer between rows before drop.
+-   Removed standalone placement creation from the Inventory workflow; new inventory now creates a default scene `Plane`, and existing inventory is reused from Archive.
+-   Hid per-inventory placement settings behind a row-level icon toggle by default, with only one inventory settings panel open at a time.
+-   Removed the row-level Archive button from active inventory; scene placements are removed from the row Settings panel instead.
+-   Changed duplicate Ad Unit ID handling to warn within Managed Scenes instead of blocking placement creation or Play Mode.
+-   Simplified EasterAdSdk, Plane, and CanvasItem inspectors to direct users to the EasterAd window.
+
 ## [1.4.0] - 2025.10.22
 
 ### Added
 
 -   Added lazy initialization option for Item components to allow adUnitId post-initialization setup
+-   Added CanvasItem support for RectTransform/UI based ad surfaces
+-   Added privacy controls for child-directed treatment, consent, offline mode, ad request enablement, and ad category policy
+-   Added ad request diagnostics event for observing load outcomes
+-   Added ad-hidden capture scope and external navigation interaction helper
+-   Added bounds-based visibility fallback when GPU AdSegmentation is unavailable
+-   Added an ETA-to-EasterAd migration guide
+-   Added a temporary `ETA` namespace source-compatibility bridge for migration
+
+### Changed
+
+-   Renamed source folders, namespaces, assemblies, asmdefs, and build scripts from `ETA` naming to `EasterAd` naming
+-   Renamed runtime config files from `ETA_Config.txt`/`ETA_Axes.txt` to `EasterAd_Config.txt`/`EasterAd_Axes.txt`
+-   Reworked pending Item initialization so SDK-ready processing no longer re-invokes Unity Awake()
+-   Centralized ItemStatus transitions for load, impression, retry, and interaction flows
+-   Changed retry scheduling to use typed internal commands instead of raw string queue entries
+
+### Fixed
+
+-   Added fallback reads for legacy `ETA_Config.txt` and `ETA_Axes.txt` during migration
+-   Prevented AdSegmentation ID double-unregister from duplicating IDs in the available pool
+-   Hardened ad response parsing against malformed JSON and cleaned up request coroutine components on early failures
 
 ## [1.3.2] - 2025.10.22
 
@@ -77,7 +122,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
--   Renamed `EtaSdk` class to `EasterAdSdk` for better clarity
+-   Renamed `EasterAdSdk` class to `EasterAdSdk` for better clarity
 -   Renamed package identifier from `com.autovertise.easterad` to `com.easterad.easterad`
 -   Updated company references from "Autovertise" to "EasterAd" throughout the project
 -   Changed minimum Unity version from 2020.2 to 2021.3

@@ -1,9 +1,9 @@
 {
-    "name": "ETA.Editor.URP",
-    "rootNamespace": "ETA_Editor.Menu",
+    "name": "EasterAd.Editor.URP",
+    "rootNamespace": "EasterAd_Editor.Menu",
     "references": [
-        "ETA",
-        "ETA.AdSegmentation.URP",
+        "EasterAd",
+        "EasterAd.AdSegmentation.URP",
         "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
@@ -13,15 +13,15 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "ETA_Implementation.dll"
+        "EasterAd_Implementation.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [
         {
             "name": "com.unity.render-pipelines.universal",
-            "expression": "",
-            "define": "URP_ENABLED"
+            "expression": "7.0.0",
+            "define": "EASTERAD_ADSEG_URP"
         }
     ],
     "noEngineReferences": false

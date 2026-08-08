@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using ETA_Dependencies.Unity;
+using EasterAd_Dependencies.Unity;
 using UnityEngine;
-using ETA_Implementation;
+using EasterAd_Implementation;
 using GameObject = UnityEngine.GameObject;
 #pragma warning disable CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
 
-namespace ETA
+namespace EasterAd
 {
     /// <summary>
     /// <para xml:lang="ko"><c>Item</c> 클래스를 통해 각 광고 오브젝트들을 제어할 수 있습니다.</para>
@@ -16,6 +17,14 @@ namespace ETA
     {
         protected ItemClient _client = null!;
         public ItemClient Client => _client;
+
+        private enum ItemInitializationState
+        {
+            Uninitialized,
+            WaitingForSdk,
+            Initialized,
+            Rejected
+        }
 
         public string adUnitId = null!; //must be set in Unity Editor
 
@@ -30,49 +39,82 @@ namespace ETA
         public bool interactable;
         public bool enableRefresh = true;
         public float refreshTime = 10.0f;
+        public bool hideDuringCapture = true;
 
         private bool _startRefresh;
         private float _refreshWaited;
         private bool _isInitialized = false;
+        private bool _loadAfterInitialize;
+        private ItemInitializationState _initializationState = ItemInitializationState.Uninitialized;
 
 
-        internal void Awake() // todo change Destroy process
+        internal void Awake()
         {
             if (EasterAdSdk.OnceInitialized == false)
             {
-                EasterAdSdk.ItemAwakeQueue.Enqueue(this);
+                _initializationState = ItemInitializationState.WaitingForSdk;
+                EasterAdSdk.RegisterPendingItem(this);
                 EnableSDK();
                 return;
             }
 
-            // autoInitialize가 true이고 adUnitId가 설정된 경우에만 자동 초기화
-            if (autoInitialize && !string.IsNullOrEmpty(adUnitId))
+            TryAutoInitialize("Awake");
+        }
+
+        internal void InitializeAfterSdkReady()
+        {
+            if (_isInitialized || _initializationState == ItemInitializationState.Rejected) { return; }
+            TryAutoInitialize("SDK initialization");
+        }
+
+        private void TryAutoInitialize(string source)
+        {
+            if (!autoInitialize)
             {
-                InitializeItemClient();
+                _initializationState = ItemInitializationState.Uninitialized;
+                return;
             }
+
+            if (string.IsNullOrEmpty(adUnitId))
+            {
+                InstanceManager.DebugLogger.LogWarning("adUnitId is empty. Cannot auto-initialize Item from " + source + ".");
+                _initializationState = ItemInitializationState.Uninitialized;
+                return;
+            }
+
+            InitializeItemClient();
         }
 
         /// <summary>
         /// <para xml:lang="ko">ItemClient를 초기화합니다.</para>
         /// <para xml:lang="en">Initializes the ItemClient.</para>
         /// </summary>
-        private void InitializeItemClient()
+        private bool InitializeItemClient()
         {
             if (!EasterAdSdk.OnceInitialized)
             {
                 InstanceManager.DebugLogger.LogWarning("EasterAdSdk is not initialized yet. Postponing Item initialization.");
-                return;
+                _initializationState = ItemInitializationState.WaitingForSdk;
+                EasterAdSdk.RegisterPendingItem(this);
+                EnableSDK();
+                return false;
             }
 
             if (string.IsNullOrEmpty(adUnitId))
             {
                 InstanceManager.DebugLogger.LogWarning("adUnitId is empty. Cannot initialize Item.");
-                return;
+                _initializationState = ItemInitializationState.Uninitialized;
+                return false;
             }
 
-            if (EasterAdSdk.Instance.GetItemClient(adUnitId) != null)
+            ItemClient? existingClient = EasterAdSdk.Instance.GetItemClient(adUnitId);
+            if (existingClient != null && !ReferenceEquals(existingClient, _client))
             {
-                InstanceManager.DebugLogger.Log("Item already exist: " + adUnitId);
+                InstanceManager.DebugLogger.LogWarning("Item already exists for adUnitId. Rejecting duplicate Item initialization: " + adUnitId);
+                _client = null!;
+                _isInitialized = false;
+                _initializationState = ItemInitializationState.Rejected;
+                return false;
             }
 
             _client = GetClient(gameObject, adUnitId);
@@ -80,12 +122,30 @@ namespace ETA
             _client.Interactable = interactable;
             EasterAdSdk.Instance.AddItemClient(adUnitId, ref _client);
             _isInitialized = true;
+            _initializationState = ItemInitializationState.Initialized;
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
+
+            if (_loadAfterInitialize && loadOnStart)
+            {
+                _loadAfterInitialize = false;
+                Load();
+            }
+
+            return true;
         }
 
         private void Start()
         {
-            if (loadOnStart && _client != null) { Load(); }
+            if (!loadOnStart) { return; }
+
+            if (IsInitialized)
+            {
+                Load();
+            }
+            else
+            {
+                _loadAfterInitialize = true;
+            }
         }
 
         private void Update()
@@ -128,9 +188,16 @@ namespace ETA
 
         private void OnDestroy()
         {
+            EasterAdSdk.UnregisterPendingItem(this);
             try
             {
-                EasterAdSdk.Instance.RemoveItemClient(adUnitId);
+                if (_isInitialized &&
+                    _client != null &&
+                    EasterAdSdk.TryGetActiveInstance(out EasterAdSdk sdk) &&
+                    ReferenceEquals(sdk.GetItemClient(adUnitId), _client))
+                {
+                    sdk.RemoveItemClient(adUnitId);
+                }
             }
             catch
             {
@@ -165,6 +232,7 @@ namespace ETA
 
             adUnitId = newAdUnitId;
             _isInitialized = false;
+            _initializationState = ItemInitializationState.Uninitialized;
             InitializeItemClient();
         }
 
@@ -194,6 +262,46 @@ namespace ETA
         /// <para xml:lang="en">Checks if the Item is initialized.</para>
         /// </summary>
         public bool IsInitialized => _isInitialized && _client != null;
+
+        protected bool TryGetInitializedClient(string operationName, out ItemClient itemClient)
+        {
+            if (IsInitialized)
+            {
+                itemClient = _client;
+                return true;
+            }
+
+            string state = _initializationState.ToString();
+            InstanceManager.DebugLogger.LogWarning($"Cannot {operationName} before Item initialization. AdUnitId: {adUnitId}, State: {state}");
+            itemClient = null!;
+            return false;
+        }
+
+        /// <summary>
+        /// <para xml:lang="ko">스크린샷/공유 캡처 등을 위해 광고 렌더링을 표시하거나 숨깁니다.</para>
+        /// <para xml:lang="en">Shows or hides ad rendering for screenshot or sharing capture flows.</para>
+        /// </summary>
+        public void SetRenderingVisible(bool visible)
+        {
+            foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = visible;
+            }
+
+            foreach (Behaviour behaviour in GetComponentsInChildren<Behaviour>(true))
+            {
+                string typeName = behaviour.GetType().FullName ?? "";
+                if (typeName == "UnityEngine.UI.RawImage" || typeName == "UnityEngine.UI.Image")
+                {
+                    behaviour.enabled = visible;
+                }
+            }
+        }
+
+        internal ItemRenderingState CaptureRenderingState()
+        {
+            return new ItemRenderingState(this);
+        }
 
         /// <summary>
         /// <para xml:lang="ko">서버에서 광고를 로드하고 표시합니다.</para>
@@ -249,19 +357,69 @@ namespace ETA
         /// </summary>
         protected abstract ItemClient GetClient(GameObject clientObject, string adUnitId);
 
+        internal sealed class ItemRenderingState
+        {
+            private readonly Renderer[] _renderers;
+            private readonly bool[] _rendererStates;
+            private readonly Behaviour[] _uiBehaviours;
+            private readonly bool[] _uiStates;
+
+            internal ItemRenderingState(Item item)
+            {
+                _renderers = item.GetComponentsInChildren<Renderer>(true);
+                _rendererStates = new bool[_renderers.Length];
+                for (int i = 0; i < _renderers.Length; i++)
+                {
+                    _rendererStates[i] = _renderers[i].enabled;
+                    _renderers[i].enabled = false;
+                }
+
+                List<Behaviour> uiBehaviours = new List<Behaviour>();
+                foreach (Behaviour behaviour in item.GetComponentsInChildren<Behaviour>(true))
+                {
+                    string typeName = behaviour.GetType().FullName ?? "";
+                    if (typeName == "UnityEngine.UI.RawImage" || typeName == "UnityEngine.UI.Image")
+                    {
+                        uiBehaviours.Add(behaviour);
+                    }
+                }
+
+                _uiBehaviours = uiBehaviours.ToArray();
+                _uiStates = new bool[_uiBehaviours.Length];
+                for (int i = 0; i < _uiBehaviours.Length; i++)
+                {
+                    _uiStates[i] = _uiBehaviours[i].enabled;
+                    _uiBehaviours[i].enabled = false;
+                }
+            }
+
+            internal void Restore()
+            {
+                for (int i = 0; i < _renderers.Length; i++)
+                {
+                    if (_renderers[i] != null) _renderers[i].enabled = _rendererStates[i];
+                }
+
+                for (int i = 0; i < _uiBehaviours.Length; i++)
+                {
+                    if (_uiBehaviours[i] != null) _uiBehaviours[i].enabled = _uiStates[i];
+                }
+            }
+        }
+
 
         private void EnableSDK()
         {
-            string filename = "ETA_Config.txt";
-            string filepath = Path.Combine(Application.streamingAssetsPath, filename);
-            if (File.Exists(filepath) == false) { return; }
-
-            string[] config = File.ReadAllLines(filepath);
-            bool easterAdEnabled = bool.Parse(config[0]);
+            if (!EasterAdConfigFiles.TryReadConfig(out string[] config, out _)) { return; }
+            if (config.Length == 0 || !bool.TryParse(config[0], out bool easterAdEnabled))
+            {
+                InstanceManager.DebugLogger.LogWarning("EasterAd config is missing the enable flag.");
+                return;
+            }
 
             if (easterAdEnabled)
             {
-                EasterAdSdk.CreateEtaSdk();
+                EasterAdSdk.CreateEasterAdSdk();
             }
         }
     }

@@ -1,15 +1,31 @@
 using UnityEngine;
-using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
+using InstanceManager = EasterAd_Dependencies.Unity.InstanceManager;
 
-namespace ETA
+namespace EasterAd
 {
+    /// <summary>
+    /// <para xml:lang="ko">광고 오브젝트를 GPU 기반 가시성 측정용 segmentation pass에 등록합니다.</para>
+    /// <para xml:lang="en">Registers an ad object for GPU-based visibility measurement in the segmentation pass.</para>
+    /// </summary>
     [RequireComponent(typeof(Renderer))]
     public class AdSegmentationObject : MonoBehaviour
     {
+        /// <summary>
+        /// <para xml:lang="ko">segmentation pass가 광고 Renderer만 필터링하기 위해 사용하는 rendering layer mask입니다.</para>
+        /// <para xml:lang="en">Rendering layer mask used by the segmentation pass to filter ad renderers only.</para>
+        /// </summary>
+        public const uint SegmentationRenderingLayerMask = 1u << 31;
+
+        /// <summary>
+        /// <para xml:lang="ko">이 광고 오브젝트에 할당된 segmentation ID입니다. 0은 등록 실패를 의미합니다.</para>
+        /// <para xml:lang="en">Segmentation ID assigned to this ad object. Zero means registration failed.</para>
+        /// </summary>
         public int SegmentationId { get; private set; }
-        private Item _item;
-        private Renderer _renderer;
-        private MaterialPropertyBlock _propBlock;
+        private Item? _item;
+        private Renderer? _renderer;
+        private MaterialPropertyBlock? _propBlock;
+        private uint _previousRenderingLayerMask;
+        private bool _hasPreviousRenderingLayerMask;
 
         void Start()
         {
@@ -46,10 +62,18 @@ namespace ETA
             _renderer.GetPropertyBlock(_propBlock);
             _propBlock.SetInt("_adSegmentationId", SegmentationId);
             _renderer.SetPropertyBlock(_propBlock);
+            _previousRenderingLayerMask = _renderer.renderingLayerMask;
+            _hasPreviousRenderingLayerMask = true;
+            _renderer.renderingLayerMask |= SegmentationRenderingLayerMask;
         }
 
         void OnDestroy()
         {
+            if (_renderer != null && _hasPreviousRenderingLayerMask)
+            {
+                _renderer.renderingLayerMask = _previousRenderingLayerMask;
+            }
+
             // ID 반납 (Manager null 체크)
             if (SegmentationId > 0 && InstanceManager.AdSegmentationManager != null)
             {

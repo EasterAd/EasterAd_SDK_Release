@@ -1,4 +1,5 @@
 using System.Text;
+using EasterAd;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -8,9 +9,9 @@ using Object = UnityEngine.Object;
 // ReSharper disable once RedundantUsingDirective
 using System.IO;
 
-namespace ETA_Editor
+namespace EasterAd_Editor
 {
-    public class EtaBuildProcess : IPreprocessBuildWithReport, IPostprocessBuildWithReport
+    public class EasterAdBuildProcess : IPreprocessBuildWithReport, IPostprocessBuildWithReport
     {
         public int callbackOrder => 0;
 
@@ -55,6 +56,6 @@ namespace ETA_Editor
             AssetDatabase.Refresh();
         }
 
-        private readonly string _filename = "ETA_Axes.txt";
+        private readonly string _filename = EasterAdConfigFiles.AxesFileName;
     }
 }

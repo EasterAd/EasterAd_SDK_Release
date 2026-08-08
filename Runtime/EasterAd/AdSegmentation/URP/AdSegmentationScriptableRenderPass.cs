@@ -1,17 +1,24 @@
+#if EASTERAD_ADSEG_URP
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+#if EASTERAD_USE_RENDER_GRAPH
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Experimental.Rendering;
+using Unity.Collections;
+#endif
+using System;
 
-namespace ETA
+namespace EasterAd
 {
+#if EASTERAD_USE_RENDER_GRAPH
     public class AdSegmentationScriptableRenderPass : ScriptableRenderPass
     {
         private Material material;
         private ComputeShader pixelCounterCS;
         private int kernelIndex;
         private ComputeBuffer pixelCountBuffer;
+        private readonly Action<uint[]> onPixelCountsReadback;
         private RTHandle segmentationRTHandle;
         private RTHandle segmentationDepthHandle;
 
@@ -21,11 +28,13 @@ namespace ETA
         public AdSegmentationScriptableRenderPass(
             Material material,
             ComputeShader pixelCounterCS,
-            ComputeBuffer pixelCountBuffer)
+            ComputeBuffer pixelCountBuffer,
+            Action<uint[]> onPixelCountsReadback)
         {
             this.material = material;
             this.pixelCounterCS = pixelCounterCS;
             this.pixelCountBuffer = pixelCountBuffer;
+            this.onPixelCountsReadback = onPixelCountsReadback;
 
             // Compute Shader 커널 인덱스 가져오기
             if (pixelCounterCS != null)
@@ -47,9 +56,12 @@ namespace ETA
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
                 UniversalLightData lightData = frameData.Get<UniversalLightData>();
 
-                // RendererList 생성 (모든 Renderer 대상)
+                // RendererList 생성 (AdSegmentationObject가 표시한 광고 Renderer만 대상)
                 var sortingCriteria = cameraData.defaultOpaqueSortFlags;
-                var filteringSettings = new FilteringSettings(RenderQueueRange.all, -1);
+                var filteringSettings = new FilteringSettings(
+                    RenderQueueRange.all,
+                    -1,
+                    AdSegmentationObject.SegmentationRenderingLayerMask);
                 var drawSettings = RenderingUtils.CreateDrawingSettings(
                     new ShaderTagId("UniversalForward"),
                     renderingData, cameraData, lightData, sortingCriteria);
@@ -111,6 +123,7 @@ namespace ETA
                     passData.kernelIndex = kernelIndex;
                     passData.pixelCountBuffer = pixelCountBuffer;
                     passData.segmentationTexture = segmentationTexture;
+                    passData.onPixelCountsReadback = onPixelCountsReadback;
 
                     // Compute Shader가 RenderTexture 읽기
                     builder.UseTexture(segmentationTexture, AccessFlags.Read);
@@ -135,6 +148,18 @@ namespace ETA
                         // Dispatch Compute Shader
                         // 256×256 텍스처 / 8×8 thread groups = 32×32 dispatches
                         context.cmd.DispatchCompute(data.computeShader, data.kernelIndex, 32, 32, 1);
+                        context.cmd.RequestAsyncReadback(data.pixelCountBuffer, request =>
+                        {
+                            if (request.hasError || data.onPixelCountsReadback == null)
+                            {
+                                return;
+                            }
+
+                            NativeArray<uint> source = request.GetData<uint>();
+                            uint[] counts = new uint[source.Length];
+                            source.CopyTo(counts);
+                            data.onPixelCountsReadback.Invoke(counts);
+                        });
                     });
                 }
             }
@@ -157,6 +182,24 @@ namespace ETA
             public int kernelIndex;
             public ComputeBuffer pixelCountBuffer;
             public TextureHandle segmentationTexture;
+            public Action<uint[]> onPixelCountsReadback;
         }
     }
+#else
+    public class AdSegmentationScriptableRenderPass : ScriptableRenderPass
+    {
+        public AdSegmentationScriptableRenderPass(
+            Material material,
+            ComputeShader pixelCounterCS,
+            ComputeBuffer pixelCountBuffer,
+            Action<uint[]> onPixelCountsReadback)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+#endif
 }
+#endif

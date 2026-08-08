@@ -1,10 +1,11 @@
+#if EASTERAD_ADSEG_URP
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
+using InstanceManager = EasterAd_Dependencies.Unity.InstanceManager;
 
-namespace ETA
+namespace EasterAd
 {
     public class AdSegmentationRendererFeature : ScriptableRendererFeature
     {
@@ -14,6 +15,10 @@ namespace ETA
 
         public override void Create()
         {
+#if !EASTERAD_USE_RENDER_GRAPH
+            InstanceManager.DebugLogger.LogWarning("EasterAd AdSegmentation requires URP 17.0.0+ with Render Graph. Basic ad loading still works, but GPU visibility measurement is disabled.");
+            return;
+#else
             // Shader 로드
             Shader shader = Shader.Find("EasterAd/AdSegmentation");
             if (shader == null)
@@ -43,12 +48,16 @@ namespace ETA
             _pixelCountBuffer = new ComputeBuffer(BufferSize, sizeof(uint), ComputeBufferType.Default);
 
             // RenderPass 생성 (Material + ComputeShader + Buffer 전달)
-            renderPass = new AdSegmentationScriptableRenderPass(material, pixelCounterCS, _pixelCountBuffer);
+            renderPass = new AdSegmentationScriptableRenderPass(material, pixelCounterCS, _pixelCountBuffer, counts =>
+            {
+                InstanceManager.AdSegmentationManager.UpdatePixelCounts(counts);
+            });
             renderPass.renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
 
             // RendererFeature 등록
             var adSegManager = InstanceManager.AdSegmentationManager;
             adSegManager.SetRendererFeature(this);
+#endif
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -67,10 +76,6 @@ namespace ETA
             if (targetCam != null && renderingData.cameraData.camera == targetCam)
             {
                 renderer.EnqueuePass(renderPass);
-
-                // AdSegmentationManager에 픽셀 카운트 업데이트 요청
-                var adSegManager = InstanceManager.AdSegmentationManager;
-                adSegManager.UpdatePixelCounts(_pixelCountBuffer);
             }
         }
 
@@ -111,3 +116,4 @@ namespace ETA
         }
     }
 }
+#endif

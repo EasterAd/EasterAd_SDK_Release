@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 
 
-namespace ETA
+namespace EasterAd
 {
     /**
  * <summary>
@@ -136,8 +136,8 @@ namespace ETA
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             if (plane != null && plane.Client != null) // 경고 무시하고 plane.Client != null 검사해야 함
             {
-                ETA_Implementation.ItemStatus status = plane.Client.GetStatus();
-                bool hideLogo = status >= ETA_Implementation.ItemStatus.Loaded;
+                EasterAd_Implementation.ItemStatus status = plane.Client.GetStatus();
+                bool hideLogo = status >= EasterAd_Implementation.ItemStatus.Loaded;
                 data.z = hideLogo ? 0.0f : 1.0f;
             }
 

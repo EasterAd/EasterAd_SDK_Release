@@ -1,12 +1,13 @@
+#if EASTERAD_ADSEG_URP
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Linq;
 using System;
-using ETA; // For AdSegmentationRendererFeature type
+using EasterAd; // For AdSegmentationRendererFeature type
 
-namespace ETA_Editor.Menu
+namespace EasterAd_Editor.Menu
 {
     /// <summary>
     /// URP Renderer Feature 자동 설치/제거 관리
@@ -248,3 +249,5 @@ namespace ETA_Editor.Menu
         }
     }
 }
+
+#endif

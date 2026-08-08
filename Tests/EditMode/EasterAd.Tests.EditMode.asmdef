@@ -2,7 +2,7 @@
   "name": "EasterAd.Tests.EditMode",
   "rootNamespace": "EasterAd.Tests.EditMode",
   "references": [
-    "ETA"
+    "EasterAd"
   ],
   "includePlatforms": [
     "Editor"

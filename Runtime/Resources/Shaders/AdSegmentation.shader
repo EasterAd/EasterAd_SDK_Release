@@ -7,6 +7,10 @@ Shader "EasterAd/AdSegmentation"
 
     SubShader
     {
+        PackageRequirements
+        {
+            "com.unity.render-pipelines.universal": "10.0"
+        }
         Tags
         {
             "RenderPipeline" = "UniversalPipeline"
@@ -56,5 +60,5 @@ Shader "EasterAd/AdSegmentation"
         }
     }
 
-    FallBack "Hidden/Universal Render Pipeline/FallbackError"
+    FallBack Off
 }

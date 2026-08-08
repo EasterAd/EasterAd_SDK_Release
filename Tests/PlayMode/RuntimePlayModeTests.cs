@@ -4,17 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-using ETA_Dependencies;
-using ETA_Implementation;
-using ETA_Implementation.Library;
+using EasterAd_Dependencies;
+using EasterAd_Implementation;
+using EasterAd_Implementation.Library;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using AdSegmentationManager = ETA_Dependencies.Unity.AdSegmentationManager;
-using DependencyGameObject = ETA_Dependencies.Unity.GameObject;
-using InstanceManager = ETA_Dependencies.Unity.InstanceManager;
+using AdSegmentationManager = EasterAd_Dependencies.Unity.AdSegmentationManager;
+using DependencyGameObject = EasterAd_Dependencies.Unity.GameObject;
+using InstanceManager = EasterAd_Dependencies.Unity.InstanceManager;
 using Object = UnityEngine.Object;
-using RuntimeUI = ETA_Dependencies.Unity.UI;
+using RuntimeUI = EasterAd_Dependencies.Unity.UI;
 
 namespace EasterAd.Tests.PlayMode
 {
@@ -82,7 +82,7 @@ namespace EasterAd.Tests.PlayMode
             unityObject = UnityEngine.GameObject.CreatePrimitive(PrimitiveType.Quad);
             var renderer = unityObject.GetComponent<Renderer>();
             renderer.sharedMaterial = null;
-            unityObject.AddComponent<ETA.MaterialManager>();
+            unityObject.AddComponent<EasterAd.MaterialManager>();
             assignedMaterial = renderer.sharedMaterial;
 
             yield return null;
@@ -109,7 +109,7 @@ namespace EasterAd.Tests.PlayMode
             unityObject = UnityEngine.GameObject.CreatePrimitive(PrimitiveType.Quad);
             var renderer = unityObject.GetComponent<Renderer>();
             renderer.sharedMaterial = null;
-            unityObject.AddComponent<ETA.MaterialManager>();
+            unityObject.AddComponent<EasterAd.MaterialManager>();
             assignedMaterial = renderer.sharedMaterial;
 
             sourceTexture = acquireAdImage();

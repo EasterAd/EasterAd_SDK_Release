@@ -1,8 +1,8 @@
 {
-    "name": "ETA.AdSegmentation.URP",
+    "name": "EasterAd.AdSegmentation.URP",
     "rootNamespace": "",
     "references": [
-        "ETA",
+        "EasterAd",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],
@@ -11,8 +11,8 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "ETA_Implementation.dll",
-        "ETA_Dependencies.dll"
+        "EasterAd_Implementation.dll",
+        "EasterAd_Dependencies.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],

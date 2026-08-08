@@ -2,15 +2,15 @@
   "name": "EasterAd.Tests.PlayMode",
   "rootNamespace": "EasterAd.Tests.PlayMode",
   "references": [
-    "ETA"
+    "EasterAd"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": true,
   "precompiledReferences": [
-    "ETA_Implementation.dll",
-    "ETA_Dependencies.dll"
+    "EasterAd_Implementation.dll",
+    "EasterAd_Dependencies.dll"
   ],
   "autoReferenced": false,
   "defineConstraints": [

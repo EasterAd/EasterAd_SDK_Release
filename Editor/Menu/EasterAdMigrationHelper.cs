@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using ETA;
+using EasterAd;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.SceneManagement;
 
-namespace ETA_Editor.Menu
+namespace EasterAd_Editor.Menu
 {
     /// <summary>
     /// Helper class for migrating from legacy EasterAd assets to the new unified system

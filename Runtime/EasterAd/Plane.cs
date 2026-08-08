@@ -1,8 +1,8 @@
-﻿using ETA_Implementation;
-using ETA_Implementation.Library;
+﻿using EasterAd_Implementation;
+using EasterAd_Implementation.Library;
 using UnityEngine;
 
-namespace ETA
+namespace EasterAd
 {
     /// <summary>
     /// <para xml:lang="ko"><c>Plane</c> 클래스는 <see cref="Item"/> 클래스를 상속받아 평면 광고 오브젝트를 제어합니다.</para>
@@ -15,12 +15,8 @@ namespace ETA
         public override void Load()
 #pragma warning restore CS1591 // 공개된 형식 또는 멤버에 대한 XML 주석이 없습니다.
         {
-            if (_client == null)
-            {
-                return;
-            }
-
-            FunctionScheduler.FuncCall(ref _client, "Load");
+            if (!TryGetInitializedClient("Load", out ItemClient itemClient)) { return; }
+            FunctionScheduler.FuncCall(ref itemClient, "Load");
         }
         
         /// <summary>
@@ -33,12 +29,8 @@ namespace ETA
         /// </returns>
         public override string StartInteraction()
         {
-            if (_client == null)
-            {
-                return string.Empty;
-            }
-
-            FunctionScheduler.FuncCall(ref _client, "StartInteraction", out string interactionUrl);
+            if (!TryGetInitializedClient("StartInteraction", out ItemClient itemClient)) { return ""; }
+            FunctionScheduler.FuncCall(ref itemClient, "StartInteraction", out string interactionUrl);
             return interactionUrl;
         }
         
@@ -48,12 +40,8 @@ namespace ETA
         /// </summary>
         public override void EndInteraction()
         {
-            if (_client == null)
-            {
-                return;
-            }
-
-            FunctionScheduler.FuncCall(ref _client, "EndInteraction");
+            if (!TryGetInitializedClient("EndInteraction", out ItemClient itemClient)) { return; }
+            FunctionScheduler.FuncCall(ref itemClient, "EndInteraction");
         }
 
         /// <summary>  
@@ -75,7 +63,7 @@ namespace ETA
         // ReSharper disable once ParameterHidesMember
         protected override ItemClient GetClient(GameObject clientObject, string adUnitId)
         {
-            return new PlaneClient(new ETA_Dependencies.Unity.GameObject(clientObject), adUnitId);
+            return new PlaneClient(new EasterAd_Dependencies.Unity.GameObject(clientObject), adUnitId);
         }
     }
 }

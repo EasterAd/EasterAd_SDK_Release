@@ -1,8 +1,9 @@
 {
-    "name": "ETAEditor",
+    "name": "EasterAdEditor",
     "rootNamespace": "",
     "references": [
-        "ETA"
+        "EasterAd",
+        "Unity.ugui"
     ],
     "includePlatforms": [
         "Editor"
@@ -11,7 +12,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "ETA_Implementation.dll"
+        "EasterAd_Implementation.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

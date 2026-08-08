@@ -10,8 +10,8 @@ namespace EasterAd.Tests.EditMode
 {
     public sealed class RuntimeEditModeTests
     {
-        [TestCase("ETA_Implementation.dll")]
-        [TestCase("ETA_Dependencies.dll")]
+        [TestCase("EasterAd_Implementation.dll")]
+        [TestCase("EasterAd_Dependencies.dll")]
         public void PackageContainsNonEmptyRuntimeAssembly(string fileName)
         {
             string assemblyPath = Path.Combine(ResolvedPackagePath(), "Runtime", fileName);
@@ -35,7 +35,7 @@ namespace EasterAd.Tests.EditMode
                 renderer = unityObject.GetComponent<Renderer>();
                 renderer.sharedMaterial = null;
 
-                unityObject.AddComponent<ETA.MaterialManager>();
+                unityObject.AddComponent<EasterAd.MaterialManager>();
                 assignedMaterial = renderer.sharedMaterial;
 
                 Assert.That(assignedMaterial, Is.Not.Null,
@@ -79,7 +79,7 @@ namespace EasterAd.Tests.EditMode
                 LogAssert.Expect(LogType.Exception,
                     new Regex("MissingComponentException: There is no 'Renderer' attached"));
 
-                unityObject.AddComponent<ETA.MaterialManager>();
+                unityObject.AddComponent<EasterAd.MaterialManager>();
             }
             finally
             {
@@ -98,8 +98,8 @@ namespace EasterAd.Tests.EditMode
             try
             {
                 unityObject = new GameObject("EasterAd uninitialized plane");
-                ETA.Plane plane = unityObject.AddComponent<ETA.Plane>();
-                MethodInfo startMethod = typeof(ETA.Item).GetMethod(
+                EasterAd.Plane plane = unityObject.AddComponent<EasterAd.Plane>();
+                MethodInfo startMethod = typeof(EasterAd.Item).GetMethod(
                     "Start", BindingFlags.Instance | BindingFlags.NonPublic);
 
                 Assert.That(startMethod, Is.Not.Null,
