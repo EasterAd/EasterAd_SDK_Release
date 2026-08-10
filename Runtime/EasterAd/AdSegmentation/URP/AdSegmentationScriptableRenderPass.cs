@@ -113,10 +113,12 @@ namespace EasterAd
                 });
             }
 
-            // ===== Pass 2: Pixel Counting (ComputePass) =====
+            // ===== Pass 2: Pixel Counting (UnsafePass) =====
             if (pixelCounterCS != null && pixelCountBuffer != null)
             {
-                using (var builder = renderGraph.AddComputePass<ComputePassData>(
+                // ComputeCommandBuffer does not expose ordered async readback. Keep dispatch and
+                // readback in one unsafe pass so the native request executes after the dispatch.
+                using (var builder = renderGraph.AddUnsafePass<ComputePassData>(
                     "PixelCountingPass", out var passData))
                 {
                     passData.computeShader = pixelCounterCS;
@@ -131,7 +133,7 @@ namespace EasterAd
                     builder.AllowPassCulling(false);
 
                     // Compute Shader 실행
-                    builder.SetRenderFunc((ComputePassData data, ComputeGraphContext context) =>
+                    builder.SetRenderFunc((ComputePassData data, UnsafeGraphContext context) =>
                     {
                         // 버퍼 클리어 (0으로 초기화)
                         context.cmd.SetBufferData(data.pixelCountBuffer, _zeroBuffer);
@@ -148,9 +150,11 @@ namespace EasterAd
                         // Dispatch Compute Shader
                         // 256×256 텍스처 / 8×8 thread groups = 32×32 dispatches
                         context.cmd.DispatchCompute(data.computeShader, data.kernelIndex, 32, 32, 1);
-                        context.cmd.RequestAsyncReadback(data.pixelCountBuffer, request =>
+                        CommandBuffer nativeCommandBuffer = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
+                        Action<uint[]> readbackCallback = data.onPixelCountsReadback;
+                        nativeCommandBuffer.RequestAsyncReadback(data.pixelCountBuffer, request =>
                         {
-                            if (request.hasError || data.onPixelCountsReadback == null)
+                            if (request.hasError || readbackCallback == null)
                             {
                                 return;
                             }
@@ -158,7 +162,7 @@ namespace EasterAd
                             NativeArray<uint> source = request.GetData<uint>();
                             uint[] counts = new uint[source.Length];
                             source.CopyTo(counts);
-                            data.onPixelCountsReadback.Invoke(counts);
+                            readbackCallback.Invoke(counts);
                         });
                     });
                 }

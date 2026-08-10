@@ -1,3 +1,4 @@
+#nullable enable annotations
 using UnityEngine;
 using InstanceManager = EasterAd_Dependencies.Unity.InstanceManager;
 

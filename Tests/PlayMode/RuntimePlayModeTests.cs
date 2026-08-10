@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using EasterAd.Contracts.Http;
+using Google.Protobuf;
 using EasterAd_Dependencies;
 using EasterAd_Implementation;
 using EasterAd_Implementation.Library;
@@ -14,6 +16,10 @@ using AdSegmentationManager = EasterAd_Dependencies.Unity.AdSegmentationManager;
 using DependencyGameObject = EasterAd_Dependencies.Unity.GameObject;
 using InstanceManager = EasterAd_Dependencies.Unity.InstanceManager;
 using Object = UnityEngine.Object;
+using DisplayLogEntry = EasterAd.Contracts.Serving.DisplayLogEntry;
+using ImpressionRequest = EasterAd.Contracts.Serving.ImpressionRequest;
+using ContractAdRequest = EasterAd.Contracts.Serving.AdRequest;
+using ContractAdResponse = EasterAd.Contracts.Serving.AdResponse;
 using RuntimeUI = EasterAd_Dependencies.Unity.UI;
 
 namespace EasterAd.Tests.PlayMode
@@ -29,9 +35,9 @@ namespace EasterAd.Tests.PlayMode
         private UnityEngine.GameObject cameraObject;
         private string registeredClientKey;
         private int registeredSegmentationId;
-        private FieldInfo componentManagerField;
-        private IComponentManager originalComponentManager;
+        private IDisposable componentManagerOverride;
         private IDisposable impressionLoggingOverride;
+        private IDisposable servingContextOverride;
         private ICamera originalMainCamera;
         private bool originalLogEnable;
         private List<string> originalDebugLogs;
@@ -51,20 +57,50 @@ namespace EasterAd.Tests.PlayMode
                 this.texture = texture;
             }
 
-            public void RunRequest(string rootUrl, string url, string session, string body,
-                IGameObject gameObject, Action<Dictionary<string, object>> callback)
+            internal EasterAd.Contracts.Serving.AdRequest LastRequest { get; private set; }
+
+            public void RunRequest(string url, string method, string session, byte[] body,
+                IGameObject gameObject, Action<byte[], string, string> callback)
+            {
+                LastRequest = ServingHttpBindings.AdService.RequestAd.RequestParser.ParseFrom(body);
+                callback(new ContractAdResponse
+                {
+                    Id = "111111111111111111111111",
+                    Url = "mock://ad-image",
+                    Mime = "image/png",
+                    Width = 2,
+                    Height = 2,
+                    AspectRatio = 1,
+                    InteractionUrl = ""
+                }.ToByteArray(), null, session);
+            }
+
+            public void LoadImage(string url, IGameObject gameObject, Action<string> callback)
             {
                 renderer.material.mainTexture = texture;
-                callback(new Dictionary<string, object>
-                {
-                    { "_id", "mock-fill" },
-                    { "url", "mock://ad-image" },
-                    { "mime", "image/png" },
-                    { "width", 2 },
-                    { "height", 2 },
-                    { "interactionUrl", string.Empty }
-                });
+                callback(null);
             }
+        }
+
+        private sealed class MockSystemInfo : ISystemInfo
+        {
+            private readonly string language;
+
+            internal MockSystemInfo(string language)
+            {
+                this.language = language;
+            }
+
+            public string GetLanguage() => language;
+            public int GetDeviceType() => 2;
+            public string GetDeviceModel() => "Example PC";
+            public string GetOperatingSystem() => "Windows";
+            public string GetOperatingSystemVersion() => "11";
+            public int GetScreenWidth() => 1920;
+            public int GetScreenHeight() => 1080;
+            public int GetScreenPpi() => 96;
+            public string GetApplicationIdentifier() => "com.example.game";
+            public string GetApplicationVersion() => "2.1.0";
         }
 
         [SetUp]
@@ -74,6 +110,82 @@ namespace EasterAd.Tests.PlayMode
             originalLogEnable = InstanceManager.DebugLogger.LogEnable;
             originalDebugLogs = new List<string>(InstanceManager.DebugLogger.DebugLogs);
             originalDebugMeshes = new List<RuntimeUI.DebugMesh>(RuntimeUI.DebugMeshes);
+        }
+
+        [Test]
+        public void ServingHttpRoutesComeFromGeneratedContractAnnotations()
+        {
+            Assert.That(ServingHttpBindings.SessionService.CreateSession.Method, Is.EqualTo("POST"));
+            Assert.That(ServingHttpBindings.SessionService.CreateSession.Path, Is.EqualTo("/api/ad/session"));
+            Assert.That(ServingHttpBindings.SessionService.UpdateSession.Method, Is.EqualTo("PUT"));
+            Assert.That(ServingHttpBindings.SessionService.DeleteSession.Method, Is.EqualTo("DELETE"));
+            Assert.That(ServingHttpBindings.HealthService.GetHealth.Path, Is.EqualTo("/api/ad/health"));
+            Assert.That(ServingHttpBindings.AdService.RequestAd.Path, Is.EqualTo("/api/ad/ad"));
+            Assert.That(ServingHttpBindings.AdService.ReportImpression.Path, Is.EqualTo("/api/ad/ad/impression"));
+            Assert.That(ServingHttpBindings.DisplayLogService.CreateDisplayLogs.Path, Is.EqualTo("/api/ad/logs/display"));
+        }
+
+        [TestCase(SystemLanguage.ChineseSimplified, "zh")]
+        [TestCase(SystemLanguage.ChineseTraditional, "zh")]
+        [TestCase(SystemLanguage.Unknown, "")]
+        public void SystemLanguageUsesIso639Alpha2OrIsOmitted(SystemLanguage language, string expected)
+        {
+            Assert.That(EasterAd_Dependencies.Unity.SystemInfo.LanguageCode(language), Is.EqualTo(expected));
+        }
+
+        [TestCase("zh")]
+        [TestCase("")]
+        public void SessionRequestOwnsStableAppAndDeviceContext(string language)
+        {
+            var request = EasterAdSdkClient.BuildSessionRequest(
+                "507f1f77bcf86cd799439010",
+                "sdk-key",
+                new MockSystemInfo(language));
+
+            Assert.That(request.AppId, Is.EqualTo("507f1f77bcf86cd799439010"));
+            Assert.That(request.AppBundle, Is.EqualTo("com.example.game"));
+            Assert.That(request.AppVersion, Is.EqualTo("2.1.0"));
+            Assert.That(request.Device.Type,
+                Is.EqualTo(EasterAd.Contracts.AdCom.DeviceType.PersonalComputer));
+            Assert.That(request.Device.Os, Is.EqualTo(EasterAd.Contracts.AdCom.OperatingSystem.Windows));
+            Assert.That(request.Device.Lang, Is.EqualTo(language));
+            Assert.That(request.Device.Model, Is.EqualTo("Example PC"));
+            Assert.That(request.Device.Osv, Is.EqualTo("11"));
+            Assert.That(request.Device.W, Is.EqualTo(1920));
+            Assert.That(request.Device.H, Is.EqualTo(1080));
+            Assert.That(request.Device.Ppi, Is.EqualTo(96));
+        }
+
+        [UnityTest]
+        public IEnumerator IntrinsicLoadUsesSessionContextWithoutRepeatingIt()
+        {
+            const string expectedAppId = "507f1f77bcf86cd799439010";
+            servingContextOverride = EasterAdSdkClient.OverrideServingContext(
+                this, expectedAppId, out _);
+            unityObject = UnityEngine.GameObject.CreatePrimitive(PrimitiveType.Quad);
+            var renderer = unityObject.GetComponent<Renderer>();
+            renderer.sharedMaterial = null;
+            unityObject.AddComponent<EasterAd.MaterialManager>();
+            assignedMaterial = renderer.sharedMaterial;
+            sourceTexture = CreateSolidTexture(new Color32(17, 93, 211, 255));
+            var componentManager = new MockImageComponentManager(renderer, sourceTexture);
+            ReplaceComponentManager(componentManager);
+
+            ItemClient client = new PlaneClient(
+                new DependencyGameObject(unityObject), "507f1f77bcf86cd799439011");
+            FunctionScheduler.FuncCall(ref client, "Load");
+
+            ContractAdRequest request = componentManager.LastRequest;
+            Assert.That(request, Is.Not.Null, "Intrinsic Load must send a typed serving request.");
+            Assert.That(ContractAdRequest.Descriptor.Fields.InDeclarationOrder()
+                .Any(field => field.Name == "bid_request"), Is.False,
+                "The SDK/server boundary must not contain a bidder-facing BidRequest.");
+            Assert.That(ContractAdRequest.Descriptor.Fields.InDeclarationOrder()
+                .Any(field => field.Name == "openrtb_context"), Is.False,
+                "Intrinsic requests must reuse session context instead of repeating it.");
+            Assert.That(client.GetStatus(), Is.EqualTo(ItemStatus.Loaded));
+
+            yield return null;
         }
 
         [UnityTest]
@@ -159,11 +271,10 @@ namespace EasterAd.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator AdSegmentationManagerReadsExactPixelCountsFromGpuBuffer()
+        public IEnumerator AdSegmentationManagerAcceptsExactPixelCountsFromGpuReadback()
         {
             const uint expectedVisiblePixels = 4096;
             var manager = new AdSegmentationManager();
-            var pixelCountBuffer = new ComputeBuffer(256, sizeof(uint));
 
             try
             {
@@ -171,7 +282,6 @@ namespace EasterAd.Tests.PlayMode
                 int segmentationId = manager.RegisterAd(itemInstanceId);
                 var pixelCounts = new uint[256];
                 pixelCounts[segmentationId] = expectedVisiblePixels;
-                pixelCountBuffer.SetData(pixelCounts);
 
                 typeof(AdSegmentationManager)
                     .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
@@ -180,7 +290,7 @@ namespace EasterAd.Tests.PlayMode
 
                 yield return null;
 
-                manager.UpdatePixelCounts(pixelCountBuffer);
+                manager.UpdatePixelCounts(pixelCounts);
 
                 Assert.That(manager.GetPixelCount(segmentationId), Is.EqualTo(expectedVisiblePixels),
                     "The GPU readback boundary must preserve the exact segmentation pixel count.");
@@ -189,7 +299,6 @@ namespace EasterAd.Tests.PlayMode
             }
             finally
             {
-                pixelCountBuffer.Dispose();
                 manager.Dispose();
             }
         }
@@ -197,10 +306,10 @@ namespace EasterAd.Tests.PlayMode
         [UnityTest]
         public IEnumerator ViewConditionsProduceExpectedRuntimeLog()
         {
-            registeredClientKey = "runtime-view-log";
-            preExistingClientKey = "pre-existing-runtime-client";
-            var capturedImpressionLogs = new List<Dictionary<string, object>>();
-            var capturedResultLogs = new List<Dictionary<string, object>>();
+            registeredClientKey = "222222222222222222222222";
+            preExistingClientKey = "333333333333333333333333";
+            var capturedImpressionLogs = new List<DisplayLogEntry>();
+            var capturedResultLogs = new List<ImpressionRequest>();
             EasterAdSdkClient preExistingSdkClient = EasterAdSdkClient.CreateClient(this);
             preExistingClientObject = UnityEngine.GameObject.CreatePrimitive(PrimitiveType.Plane);
             ItemClient preExistingClient = new PlaneClient(
@@ -214,13 +323,34 @@ namespace EasterAd.Tests.PlayMode
             unityObject = UnityEngine.GameObject.CreatePrimitive(PrimitiveType.Plane);
             ItemClient client = new PlaneClient(new DependencyGameObject(unityObject), registeredClientKey);
             SetItemStatus(client, ItemStatus.Loaded);
+            ItemClient[] loadedClients = { preExistingClient, client };
+            string[] fillIds = {
+                "444444444444444444444444",
+                "555555555555555555555555"
+            };
+            FieldInfo responseField = typeof(ItemClient)
+                .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
+                .Single(field => field.FieldType.IsValueType && field.FieldType
+                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Count(valueField => valueField.FieldType == typeof(string)) == 2);
+            for (int i = 0; i < loadedClients.Length; i++)
+            {
+                object response = responseField.GetValue(loadedClients[i]);
+                foreach (FieldInfo valueField in response.GetType()
+                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Where(field => field.FieldType == typeof(string)))
+                {
+                    valueField.SetValue(response, fillIds[i]);
+                }
+                responseField.SetValue(loadedClients[i], response);
+            }
 
             InstanceManager.UI.AddDebugMesh(new DependencyGameObject(unityObject), new[] { 255, 0, 0, 128 });
             var expectedDebugMeshes = new List<RuntimeUI.DebugMesh>(RuntimeUI.DebugMeshes);
 
             impressionLoggingOverride = EasterAdSdkClient.OverrideImpressionLogging(this,
-                value => capturedImpressionLogs.Add((Dictionary<string, object>)value),
-                value => capturedResultLogs.Add((Dictionary<string, object>)value),
+                value => capturedImpressionLogs.Add(value),
+                value => capturedResultLogs.Add(value),
                 DateTime.Now, out EasterAdSdkClient sdkClient);
             sdkClient.AddItemClient(registeredClientKey, ref client);
 
@@ -262,7 +392,7 @@ namespace EasterAd.Tests.PlayMode
                 "Each view-condition evaluation must use the injected logger instead of the process-wide HTTP log worker.");
             Assert.That(capturedResultLogs, Has.Count.EqualTo(1),
                 "Ending a qualified view must invoke the injected impression-result logger exactly once.");
-            Assert.That(capturedResultLogs[0]["adUnitId"], Is.EqualTo(registeredClientKey),
+            Assert.That(capturedResultLogs[0].AdUnitId, Is.EqualTo(registeredClientKey),
                 "The emitted impression result must identify the viewed ad placement.");
             Assert.That(EasterAdSdkClient.CreateClient(this), Is.SameAs(preExistingSdkClient),
                 "The logging override must restore the pre-existing SDK singleton object graph.");
@@ -349,6 +479,11 @@ namespace EasterAd.Tests.PlayMode
                 impressionLoggingOverride.Dispose();
             }
 
+            if (servingContextOverride != null)
+            {
+                servingContextOverride.Dispose();
+            }
+
             if (!string.IsNullOrEmpty(preExistingClientKey))
             {
                 EasterAdSdkClient sdkClient = EasterAdSdkClient.CreateClient(this);
@@ -372,9 +507,9 @@ namespace EasterAd.Tests.PlayMode
                 InstanceManager.DebugLogger.DebugLogs.AddRange(originalDebugLogs);
             }
 
-            if (componentManagerField != null)
+            if (componentManagerOverride != null)
             {
-                componentManagerField.SetValue(null, originalComponentManager);
+                componentManagerOverride.Dispose();
             }
 
             if (originalDebugMeshes != null)
@@ -429,9 +564,9 @@ namespace EasterAd.Tests.PlayMode
             registeredClientKey = null;
             preExistingClientKey = null;
             registeredSegmentationId = 0;
-            componentManagerField = null;
-            originalComponentManager = null;
+            componentManagerOverride = null;
             impressionLoggingOverride = null;
+            servingContextOverride = null;
             originalMainCamera = null;
             originalLogEnable = false;
             originalDebugLogs = null;
@@ -442,11 +577,7 @@ namespace EasterAd.Tests.PlayMode
 
         private void ReplaceComponentManager(IComponentManager replacement)
         {
-            componentManagerField = typeof(InstanceManager)
-                .GetFields(BindingFlags.Static | BindingFlags.NonPublic)
-                .Single(field => field.FieldType == typeof(IComponentManager));
-            originalComponentManager = (IComponentManager)componentManagerField.GetValue(null);
-            componentManagerField.SetValue(null, replacement);
+            componentManagerOverride = InstanceManager.OverrideComponentManager(replacement);
         }
 
         private static Texture2D CreateSolidTexture(Color32 color)

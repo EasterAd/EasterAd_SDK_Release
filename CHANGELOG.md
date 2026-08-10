@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+-   Replaced the EasterAd-specific serving platform field with AdCOM device type, operating system, language, model, screen, and OS-version fields in session requests.
 -   Redesigned `Window > EasterAd` as a UI Toolkit console aligned with the EasterAd web dashboard layout, colors, and folder/component structure.
 -   Moved dashboard API key, organization, and game selection into Settings and persist the selected dashboard project in EditorPrefs.
 -   Changed dashboard data updates to run when the window opens, tabs/settings are used, dashboard project selection changes, or the error banner's Refresh button is pressed instead of on a fixed interval.

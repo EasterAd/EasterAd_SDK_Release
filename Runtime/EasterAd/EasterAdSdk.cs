@@ -552,7 +552,7 @@ namespace EasterAd
 #if UNITY_EDITOR
             UnityEngine.Object inputManager = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("ProjectSettings/InputManager.asset");
             if (inputManager == null) { return axesNames; }
-            
+
             SerializedObject obj = new SerializedObject(inputManager);
             SerializedProperty axisArray = obj.FindProperty("m_Axes");
 

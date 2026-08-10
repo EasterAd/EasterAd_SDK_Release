@@ -10,6 +10,8 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
+#nullable enable annotations
+
 // ReSharper disable once RedundantUsingDirective
 using System.IO;
 

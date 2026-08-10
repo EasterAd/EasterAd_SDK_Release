@@ -10,7 +10,11 @@
   "overrideReferences": true,
   "precompiledReferences": [
     "EasterAd_Implementation.dll",
-    "EasterAd_Dependencies.dll"
+    "EasterAd_Dependencies.dll",
+    "EasterAd.Contracts.Common.dll",
+    "EasterAd.Contracts.AdCom.dll",
+    "EasterAd.Contracts.Serving.dll",
+    "Google.Protobuf.dll"
   ],
   "autoReferenced": false,
   "defineConstraints": [
