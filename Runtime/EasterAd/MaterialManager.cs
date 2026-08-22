@@ -28,10 +28,17 @@ namespace EasterAd
         /// </summary>
         public Shader? defaultShader;
         private Renderer? planeRenderer;
+        private Material? ownedMaterial;
+
         void Awake()
         {
             planeRenderer = GetComponent<Renderer>();
             ApplyMaterial();
+        }
+
+        void OnDestroy()
+        {
+            ReleaseOwnedMaterial();
         }
 
         void Update()
@@ -69,10 +76,11 @@ namespace EasterAd
 
             if (defaultMaterial != null)
             {
-                material = new Material(defaultMaterial)
+                material = new Material(defaultMaterial);
+                if (defaultShader != null)
                 {
-                    shader = defaultShader ? defaultShader : null
-                };
+                    material.shader = defaultShader;
+                }
             }
             else
             {
@@ -121,7 +129,10 @@ namespace EasterAd
                 return;
             }
 
+            Material? previousOwnedMaterial = ownedMaterial;
+            ownedMaterial = material;
             planeRenderer.sharedMaterial = material;
+            DestroyOwnedMaterial(previousOwnedMaterial);
         }
 
         private void SetConstantData()
@@ -141,8 +152,43 @@ namespace EasterAd
                 data.z = hideLogo ? 0.0f : 1.0f;
             }
 
+            Material? material = planeRenderer != null ? planeRenderer.sharedMaterial : null;
+            if (material == null)
+            {
+                return;
+            }
+
             // ReSharper disable once Unity.PreferAddressByIdToGraphicsParams
-            planeRenderer!.sharedMaterial.SetVector("_ConstantData", data);
+            material.SetVector("_ConstantData", data);
+        }
+
+        private void ReleaseOwnedMaterial()
+        {
+            Material? material = ownedMaterial;
+            ownedMaterial = null;
+            if (planeRenderer != null && planeRenderer.sharedMaterial == material)
+            {
+                planeRenderer.sharedMaterial = null;
+            }
+
+            DestroyOwnedMaterial(material);
+        }
+
+        private static void DestroyOwnedMaterial(Material? material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                DestroyImmediate(material);
+                return;
+            }
+#endif
+            Destroy(material);
         }
     }
 }

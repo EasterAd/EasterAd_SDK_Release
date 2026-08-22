@@ -20,8 +20,8 @@ namespace EasterAd
         }
         
         /// <summary>
-        /// <para xml:lang="ko">광고와의 상호작용을 시작하고 상호작용 URL을 반환합니다.</para>
-        /// <para xml:lang="en">Starts interaction with the ad and returns the interaction URL.</para>
+        /// <para xml:lang="ko">지원되는 게임 내 광고와의 상호작용을 시작하고 URL을 반환합니다. Android/iOS 또는 Unity WebGL에서는 빈 문자열을 반환합니다.</para>
+        /// <para xml:lang="en">Starts interaction with a supported in-game ad and returns its URL. It returns an empty string on Android/iOS and Unity WebGL.</para>
         /// </summary>
         /// <returns>
         /// <para xml:lang="ko">상호작용 URL 문자열입니다.</para>
@@ -35,8 +35,8 @@ namespace EasterAd
         }
         
         /// <summary>
-        /// <para xml:lang="ko">광고와의 상호작용을 종료합니다.</para>
-        /// <para xml:lang="en">Ends interaction with the ad.</para>
+        /// <para xml:lang="ko">지원되는 게임 내 광고와의 상호작용을 종료합니다. Android/iOS와 Unity WebGL에서는 아무 작업도 하지 않습니다.</para>
+        /// <para xml:lang="en">Ends interaction with a supported in-game ad. This is a no-op on Android/iOS and Unity WebGL.</para>
         /// </summary>
         public override void EndInteraction()
         {

@@ -46,11 +46,19 @@ namespace EasterAd
         private float _refreshWaited;
         private bool _isInitialized = false;
         private bool _loadAfterInitialize;
+        private bool _inGameRenderingSuppressed;
         private ItemInitializationState _initializationState = ItemInitializationState.Uninitialized;
 
 
         internal void Awake()
         {
+            if (Application.platform == RuntimePlatform.Android ||
+                Application.platform == RuntimePlatform.IPhonePlayer ||
+                Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                SuppressInGameRendering();
+            }
+
             if (EasterAdSdk.OnceInitialized == false)
             {
                 _initializationState = ItemInitializationState.WaitingForSdk;
@@ -126,6 +134,11 @@ namespace EasterAd
             _initializationState = ItemInitializationState.Initialized;
             InstanceManager.DebugLogger.Log("Item added: " + adUnitId);
 
+            if (ShouldSuppressInGameRendering())
+            {
+                SuppressInGameRendering();
+            }
+
             if (_loadAfterInitialize && loadOnStart)
             {
                 _loadAfterInitialize = false;
@@ -153,6 +166,12 @@ namespace EasterAd
         {
             // client가 없으면 Update 스킵
             if (_client == null) return;
+
+            if (ShouldSuppressInGameRendering())
+            {
+                SuppressInGameRendering();
+                return;
+            }
 
             _client.AllowImpression = allowImpression;
             _client.Interactable = interactable;
@@ -187,6 +206,27 @@ namespace EasterAd
             }
         }
 
+        private bool ShouldSuppressInGameRendering()
+        {
+            if (Application.platform == RuntimePlatform.Android ||
+                Application.platform == RuntimePlatform.IPhonePlayer ||
+                Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                return true;
+            }
+
+            return EasterAdSdk.TryGetActiveInstance(out EasterAdSdk sdk) &&
+                   (sdk.UsesExternalMobileAds || !sdk.SupportsAdsOnCurrentPlatform);
+        }
+
+        private void SuppressInGameRendering()
+        {
+            if (_inGameRenderingSuppressed) { return; }
+
+            SetRenderingVisible(false);
+            _inGameRenderingSuppressed = true;
+        }
+
         private void OnDestroy()
         {
             EasterAdSdk.UnregisterPendingItem(this);
@@ -194,10 +234,9 @@ namespace EasterAd
             {
                 if (_isInitialized &&
                     _client != null &&
-                    EasterAdSdk.TryGetActiveInstance(out EasterAdSdk sdk) &&
-                    ReferenceEquals(sdk.GetItemClient(adUnitId), _client))
+                    EasterAdSdk.TryGetActiveInstance(out EasterAdSdk sdk))
                 {
-                    sdk.RemoveItemClient(adUnitId);
+                    sdk.DestroyItemClient(_client);
                 }
             }
             catch
@@ -222,7 +261,7 @@ namespace EasterAd
                 // 기존 client 정리
                 try
                 {
-                    EasterAdSdk.Instance.RemoveItemClient(adUnitId);
+                    EasterAdSdk.Instance.DestroyItemClient(_client);
                     InstanceManager.DebugLogger.Log($"Removed existing Item client: {adUnitId}");
                 }
                 catch (Exception ex)
@@ -284,6 +323,13 @@ namespace EasterAd
         /// </summary>
         public void SetRenderingVisible(bool visible)
         {
+            if (visible && ShouldSuppressInGameRendering())
+            {
+                InstanceManager.DebugLogger.LogWarning(
+                    "In-game ad rendering cannot be enabled when presentation is externally owned or the runtime platform is unsupported.");
+                return;
+            }
+
             foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = visible;
@@ -305,8 +351,8 @@ namespace EasterAd
         }
 
         /// <summary>
-        /// <para xml:lang="ko">서버에서 광고를 로드하고 표시합니다.</para>
-        /// <para xml:lang="en">Load Ad from server and show if.</para>
+        /// <para xml:lang="ko">Android/iOS에서는 등록된 외부 provider에 load-and-show를 위임하고, 지원되는 비-WebGL 비모바일 플랫폼에서는 EasterAd 광고를 게임 안에 로드합니다. Unity WebGL에서는 fail-closed로 비활성화합니다.</para>
+        /// <para xml:lang="en">Delegates load-and-show to the registered external provider on Android/iOS, loads the EasterAd creative in-game on supported non-WebGL non-mobile platforms, and fails closed on Unity WebGL.</para>
         /// </summary>
         public abstract void Load();
 

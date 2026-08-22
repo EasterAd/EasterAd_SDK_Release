@@ -1,6 +1,6 @@
 using System.IO;
 using System.Reflection;
-using System.Text.RegularExpressions;
+using EasterAd_Dependencies.Common;
 using NUnit.Framework;
 using UnityEditor.PackageManager;
 using UnityEngine;
@@ -22,12 +22,27 @@ namespace EasterAd.Tests.EditMode
                 $"The prepared package runtime assembly {fileName} must not be empty.");
         }
 
+        [TestCase("https://cdn.example.com/ad.png", true)]
+        [TestCase("http://cdn.example.com/ad.png", true)]
+        [TestCase("/relative/ad.png", false)]
+        [TestCase("javascript:alert(1)", false)]
+        [TestCase("data:image/png;base64,AA==", false)]
+        [TestCase("file:///tmp/ad.png", false)]
+        [TestCase("https://user:password@cdn.example.com/ad.png", false)]
+        [TestCase("https://cdn.example.com@evil.example/ad.png", false)]
+        public void AdContentUrlPolicyAllowsOnlyAbsoluteHttpUrlsWithoutUserInfo(string value, bool expected)
+        {
+            Assert.That(HttpUrlPolicy.IsAllowed(value), Is.EqualTo(expected));
+        }
+
         [Test]
         public void PackagedMaterialManagerAssignsSdkShaderMaterial()
         {
             GameObject unityObject = null;
             Renderer renderer = null;
-            Material assignedMaterial = null;
+            Material firstAssignedMaterial = null;
+            Material replacementMaterial = null;
+            Material hostMaterial = null;
 
             try
             {
@@ -35,29 +50,46 @@ namespace EasterAd.Tests.EditMode
                 renderer = unityObject.GetComponent<Renderer>();
                 renderer.sharedMaterial = null;
 
-                unityObject.AddComponent<EasterAd.MaterialManager>();
-                assignedMaterial = renderer.sharedMaterial;
+                EasterAd.MaterialManager manager = unityObject.AddComponent<EasterAd.MaterialManager>();
+                firstAssignedMaterial = renderer.sharedMaterial;
 
-                Assert.That(assignedMaterial, Is.Not.Null,
+                Assert.That(firstAssignedMaterial, Is.Not.Null,
                     "The packaged MaterialManager must assign a material to an ad renderer.");
-                Assert.That(assignedMaterial.shader, Is.Not.Null,
+                Assert.That(firstAssignedMaterial.shader, Is.Not.Null,
                     "The assigned ad material must use an available SDK shader.");
-                Assert.That(assignedMaterial.shader.name, Is.EqualTo("EasterAd/UnifiedShader"),
+                Assert.That(firstAssignedMaterial.shader.name, Is.EqualTo("EasterAd/UnifiedShader"),
                     "The packaged MaterialManager must use the current unified EasterAd shader.");
+
+                hostMaterial = new Material(firstAssignedMaterial.shader);
+                manager.defaultMaterial = hostMaterial;
+                MethodInfo applyMaterial = typeof(EasterAd.MaterialManager).GetMethod(
+                    "ApplyMaterial", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(applyMaterial, Is.Not.Null);
+                applyMaterial.Invoke(manager, null);
+                replacementMaterial = renderer.sharedMaterial;
+
+                Assert.That(replacementMaterial, Is.Not.SameAs(hostMaterial),
+                    "MaterialManager must clone, not take ownership of, a host material.");
+                Assert.That(firstAssignedMaterial == null, Is.True,
+                    "Replacing an SDK material in EditMode must destroy the previous native material immediately.");
+
+                UnityEngine.Object.DestroyImmediate(unityObject);
+                unityObject = null;
+                Assert.That(replacementMaterial == null, Is.True,
+                    "Destroying the ad target must release the SDK-owned material.");
+                Assert.That(hostMaterial == null, Is.False,
+                    "Destroying the ad target must not destroy the host-owned source material.");
             }
             finally
             {
-                Material materialToDestroy = assignedMaterial != null
-                    ? assignedMaterial
-                    : renderer != null ? renderer.sharedMaterial : null;
-                if (materialToDestroy != null)
-                {
-                    UnityEngine.Object.DestroyImmediate(materialToDestroy);
-                }
-
                 if (unityObject != null)
                 {
                     UnityEngine.Object.DestroyImmediate(unityObject);
+                }
+
+                if (hostMaterial != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(hostMaterial);
                 }
             }
         }
@@ -76,9 +108,6 @@ namespace EasterAd.Tests.EditMode
                 {
                     LogAssert.Expect(LogType.Error, "Plane Renderer is not found on ad prefab.");
                 }
-                LogAssert.Expect(LogType.Exception,
-                    new Regex("MissingComponentException: There is no 'Renderer' attached"));
-
                 unityObject.AddComponent<EasterAd.MaterialManager>();
             }
             finally

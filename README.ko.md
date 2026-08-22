@@ -45,18 +45,71 @@ EasterAd 1.4에서는 공개 namespace와 assembly 이름이 `ETA`에서 `Easter
 
 기존 프로젝트는 [ETA to EasterAd Migration Guide](MIGRATION_ETA_TO_EASTERAD.md)를 확인해주세요. 마이그레이션을 안전하게 하기 위해 한시적인 `ETA` namespace bridge와 `ETA_Config.txt` fallback을 포함했지만, 새 코드에서는 사용하지 않는 것을 권장합니다.
 
+## 플랫폼별 광고 소유권
+
+> **2.0.0 런타임 동작의 호환성 단절:** Android/iOS 빌드는 더 이상 EasterAd 자체 session, 광고 request, texture, impression, refresh, presentation 경로를 사용하지 않습니다. Unity WebGL은 브라우저 serving 계약을 구현하고 검증하기 전까지 fail-closed 비지원입니다.
+
+| 실제 런타임 플랫폼 | 광고 소유자 | `Plane` / `CanvasItem` 동작 |
+| --- | --- | --- |
+| Android, iOS | 호스트가 제공한 `IEasterAdMobileAdProvider` | `Item.Load()`가 provider의 단일 load-and-show operation에 위임됩니다. demand, creative, presentation, refresh, impression, click reporting은 provider가 모두 소유합니다. |
+| Windows, macOS, Linux 및 그 밖의 지원되는 비-WebGL 비모바일 플랫폼 | EasterAd | 기존 EasterAd session, request, texture, 게임 내 `Plane`/`CanvasItem`, refresh, impression 흐름이 유지됩니다. |
+| Unity WebGL | 없음 | `Item.Load()`는 `Disabled`, `Skipped / UnsupportedPlatform`으로 종료됩니다. EasterAd session, 광고 request, provider 호출, texture 변경, impression, refresh는 모두 0이며 게임 내 지면은 숨긴 상태를 유지합니다. |
+
+라우팅은 항상 Unity가 보고한 실제 런타임 플랫폼을 사용합니다. Custom Platform 설정은 telemetry metadata일 뿐이며 모바일 라우팅을 강제하거나 우회할 수 없습니다.
+
+현재 first-party session transport는 Unity WebGL에서 재사용할 수 없습니다. Unity Web 플랫폼은 .NET `System.Net` 네트워킹을 지원하지 않고 `Cookie` 같은 제한 헤더는 브라우저가 소유합니다. 따라서 WebGL 지원에는 backend CORS/SameSite/browser-cookie session 계약, UnityWebRequest/Fetch transport, 실제 브라우저 end-to-end gate가 모두 필요합니다. 세 조건이 갖춰지기 전에는 Android/iOS provider로 fallback하거나 오래된 게임 내 지면을 보이지 않고 fail-closed로 종료합니다. Unity 공식 [Web networking](https://docs.unity3d.com/6000.0/Documentation/Manual/webgl-networking.html) 및 [UnityWebRequest header 제한](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Networking.UnityWebRequest.SetRequestHeader.html)을 참고하세요.
+
+지원되는 first-party 플랫폼에서 Unity는 정확한 submodule 커밋 `5748c8765ec8e3925864062741647828d9481391`에서 생성된 serving 계약을 사용합니다. 기본 transport는 각 method와 path를 `ServingHttpBindings`에서 가져오고 protobuf request와 response body를 `application/proto`로 전송합니다. 세션 생성은 `appId`, `sdkVersion`, 비어 있지 않은 bundle과 version을 가진 `NativeApp` 하나, typed AdCOM device 문맥을 보냅니다. 비어 있지 않은 `sdkKey`는 live 세션에 포함하고, 빈 Key는 test 세션을 위해 optional protobuf 필드 자체를 생략합니다. 재초기화는 대체 세션을 먼저 생성하고 채택한 뒤 이전 세션을 삭제하며, shutdown은 활성 세션을 삭제합니다. 현재 계약에는 session update operation이 없습니다.
+
+현재 serving protobuf에는 privacy, consent, child-directed, personalized-ad, region, category-list 필드가 없습니다. `AdRequestsAllowed`, offline mode, kill switch는 request 또는 provider 호출을 억제하는 SDK 로컬 gate입니다. 나머지 privacy/category 값은 로컬 정책 상태로만 유지되며 EasterAd 또는 외부 모바일 provider에 자동 전송되지 않습니다. `SetAdCategoryPolicy` 자체도 server-side 또는 vendor-side 필터링을 시행하지 않습니다. Android/iOS에서는 호스트가 선택한 vendor의 privacy/category 제어를 별도로 적용해야 합니다.
+
+Android/iOS에서는 호스트 앱이 vendor 광고 SDK를 초기화하고 첫 `Item.Load()` 전에(`loadOnStart` Item이 로드되기 전에도) provider 하나를 등록해야 합니다.
+
+```csharp
+IEasterAdMobileAdProvider provider = new MyMobileAdProvider();
+EasterAdSdk.RegisterMobileAdProvider(provider);
+
+// 기존 placement 코드는 모든 플랫폼에서 동일합니다.
+canvasItem.Load();
+```
+
+Vendor 초기화가 비동기라면 `loadOnStart=false`로 두고 초기화와 등록 성공을 기다린 다음 `Load()`를 명시적으로 호출합니다.
+
+Provider 계약은 특정 vendor에 종속되지 않습니다.
+
+```csharp
+IDisposable LoadAndShow(
+    EasterAdMobileAdRequest request,
+    Action<EasterAdMobileAdResult> completion);
+```
+
+Request에는 EasterAd logical placement key와 `Plane`/`Canvas` surface hint가 들어갑니다. Provider는 이 값을 vendor placement 또는 ad-unit identifier로 매핑하고 `EasterAdMobileAdResult.Displayed()`, `.NoFill()`, `.Failed(EasterAdMobileAdFailure)` 중 하나의 typed terminal result만 전달합니다. 취소되지 않은 lifecycle은 전체 load-and-show operation이 끝난 뒤 `completion`을 정확히 한 번 호출해야 합니다. EasterAd가 handle을 dispose해 취소한 뒤에는 호출하지 않아야 하며, 늦거나 중복된 callback은 무시됩니다. `Displayed`는 광고가 실제 표시된 뒤 정상 완료 또는 닫힘까지 끝났다는 뜻이며, 단순 load/표시 시작이나 reward 지급 명령이 아닙니다. Provider/vendor 초기화와 최종 종료는 호스트가 소유합니다. EasterAd는 terminal result 처리 뒤 request별 `IDisposable`을 dispose합니다.
+
+Operation handle의 `Dispose()`는 멱등이고, 취소 소유권 이전이 끝날 때까지 동기적으로 완료되며, 예외를 던지지 않아야 합니다. EasterAd는 `LoadAndShow`가 반환 중인 동안 global presentation/provider lease를 유지하고, 취소된 뒤 반환된 handle을 먼저 dispose한 후 lease를 해제합니다. 취소 cleanup이 예외를 던지면 cleanup 상태를 확신할 수 없으므로 해당 process가 종료될 때까지 모바일 presentation을 의도적으로 fail-closed로 고정하고 provider 등록 해제와 새 SDK client의 겹치는 호출을 차단합니다. 이는 provider를 수정하고 앱을 재시작해야 하는 연동 오류이며 runtime reset API는 없습니다.
+
+같은 provider 인스턴스를 다시 등록하면 no-op입니다. 다른 provider로의 교체 또는 operation이 활성화된 동안의 등록 해제는 거부됩니다. Operation이 끝나기를 기다리거나 해당 Item을 제거/파괴하고 pending callback 처리가 끝난 안전한 앱 lifecycle 지점에서 `EasterAdSdk.UnregisterMobileAdProvider(provider)`를 호출한 뒤, 호스트가 provider를 종료해야 합니다. Component 또는 GameObject를 단순 비활성화하는 것은 명시적인 operation cancel API가 아닙니다.
+
+개인정보 정책, offline mode, 광고 요청 비활성화, kill switch는 provider 호출 전에 평가됩니다. Provider 미등록, 잘못된 request, provider 오류, no-fill은 fail-closed로 처리됩니다. EasterAd는 모바일 내부 session/request를 만들거나 EasterAd texture를 적용하거나 자체 impression을 기록하거나 게임 내 광고로 fallback하지 않습니다. Provider callback은 queue를 거쳐 Unity main thread에서 반영됩니다.
+
+Android/iOS에서는 `Item.allowImpression`, `interactable`, `enableRefresh`, `refreshTime`, `hideDuringCapture`가 외부 SDK UI, measurement, click, refresh, capture 동작을 제어하지 않습니다. `EasterAdCaptureScope`도 vendor가 소유한 overlay를 숨길 수 없습니다. 해당 정책은 선택한 vendor API를 사용해 provider/host에서 구현해야 합니다. 이 필드들은 지원되는 EasterAd renderer 플랫폼에서만 기존 의미를 유지합니다.
+
+EasterAd는 특정 모바일 광고 SDK를 내장하지 않습니다. 따라서 Android/iOS production 검증에는 선택한 vendor SDK, 해당 EasterAd provider module, test credential/placement, 실제 기기가 필요합니다. H5의 DOM/VAST presentation과 browser lifecycle 코드는 Unity 모바일 경로에 포함되지 않습니다.
+
 ## 런타임 기능
 
-- `EasterAdSdk`는 SDK 초기화, 세션 생명주기, 개인정보 설정, 진단 이벤트, impression 측정용 target camera를 관리합니다.
-- `Plane`은 3D 월드 공간 광고 지면을 지원하고, `CanvasItem`은 RectTransform/UI 광고 지면을 지원합니다.
+- `EasterAdSdk`는 SDK 초기화, 개인정보 설정, 진단 이벤트, 플랫폼 라우팅과 지원되는 비-WebGL 비모바일 플랫폼의 세션 생명주기 및 impression 측정용 target camera를 관리합니다.
+- 지원되는 비-WebGL 비모바일 플랫폼에서 `Plane`은 3D 월드 공간 광고 지면을 지원하고, `CanvasItem`은 RectTransform/UI 광고 지면을 지원합니다.
 - `Item`은 런타임 `adUnitId` 설정을 위한 lazy/manual initialization을 지원합니다. SDK 초기화 전에 생성된 Item은 pending lifecycle queue를 통해 초기화됩니다.
 - 광고 로드는 loaded, no-fill, policy-disabled, unsupported-content, retryable network, retryable image, invalid-response 결과로 분류됩니다.
-- Impression 측정은 가능한 경우 GPU AdSegmentation을 사용하고, GPU 측정을 사용할 수 없으면 bounds 기반 visibility fallback을 사용합니다.
+- 지원되는 게임 내 플랫폼의 impression 측정은 가능한 경우 GPU AdSegmentation을 사용하고, GPU 측정을 사용할 수 없으면 bounds 기반 visibility fallback을 사용합니다.
 - URP GPU visibility에는 AdSegmentation renderer feature가 필요합니다. URP가 없어도 기본 광고 로드는 계속 동작합니다.
 
 ## 운영 참고사항
 
 - `NoFill`, policy-disabled, unsupported-content, invalid server response는 retry하지 않습니다.
 - retryable network 및 image 실패만 제한적으로 retry합니다.
+- Android/iOS provider 오류와 no-fill은 EasterAd 게임 내 renderer를 통한 retry나 fallback으로 이어지지 않습니다.
+- 지원되는 게임 내 플랫폼의 renderer는 URL userinfo가 없는 absolute HTTP(S) media/click URL만 허용합니다. Relative URL과 `javascript:`, `data:`, `file:`, userinfo URL은 거부하며 creative image download는 redirect를 따라가지 않습니다. Click navigation은 host platform/browser에 넘기므로 최초 click URL 이후 redirect chain의 검증과 통제는 publisher 책임입니다. `UnityWebRequest`의 플랫폼 cookie 저장소는 Unity가 관리하므로 creative media는 앱 또는 vendor 인증 cookie를 공유하지 않는 전용 CDN origin에서 제공해야 합니다.
+- 게임 내 creative는 PNG/JPEG raster image만 지원하고, image request 10초, encoded 8 MiB, 한 변 8,192 pixels, decoded 16,777,216 pixels 제한을 적용합니다. Unity decode 전에 PNG/JPEG encoded header에서 dimensions를 검증하며, invalid/oversized creative는 retry하지 않습니다. HTML, VAST, SVG, GIF, unknown MIME은 unsupported/no-fill이며 Unity에 H5/WebView fallback을 추가하지 않습니다.
 - GPU AdSegmentation은 최대 255개의 등록된 광고 오브젝트를 지원합니다.
 - Bounds fallback은 실제 occlusion을 측정하지 않습니다. GPU pixel counting과 동일한 정확도가 아니라 가용성 fallback입니다.

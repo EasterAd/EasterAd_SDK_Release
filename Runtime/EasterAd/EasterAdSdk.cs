@@ -39,6 +39,40 @@ namespace EasterAd
         /// </summary>
         public static bool OnceInitialized { get; private set; }
 
+        /// <summary>
+        /// <para xml:lang="ko">Android 또는 iOS에서 광고 표시를 소유할 외부 모바일 광고 provider를 등록합니다.</para>
+        /// <para xml:lang="en">Registers the external mobile ad provider that owns presentation on Android and iOS.</para>
+        /// </summary>
+        /// <param name="provider">
+        /// <para xml:lang="ko">앱이 초기화하고 소유하는 외부 광고 provider입니다.</para>
+        /// <para xml:lang="en">The external ad provider initialized and owned by the host application.</para>
+        /// </param>
+        /// <remarks>
+        /// <para xml:lang="ko">첫 <see cref="Item.Load"/> 호출 전에 등록해야 합니다. 동일 인스턴스 재등록은 안전하지만 다른 provider로의 즉시 교체는 허용되지 않습니다.</para>
+        /// <para xml:lang="en">Register before the first <see cref="Item.Load"/> call. Re-registering the same instance is safe; hot-swapping to another provider is rejected.</para>
+        /// </remarks>
+        public static void RegisterMobileAdProvider(IEasterAdMobileAdProvider provider)
+        {
+            EasterAdSdkClient.RegisterMobileAdProvider(provider);
+        }
+
+        /// <summary>
+        /// <para xml:lang="ko">현재 등록된 외부 모바일 광고 provider가 지정한 인스턴스와 같을 때 등록을 해제합니다.</para>
+        /// <para xml:lang="en">Unregisters the external mobile ad provider when it is the same registered instance.</para>
+        /// </summary>
+        /// <param name="provider">
+        /// <para xml:lang="ko">등록 해제할 provider 인스턴스입니다.</para>
+        /// <para xml:lang="en">The provider instance to unregister.</para>
+        /// </param>
+        /// <returns>
+        /// <para xml:lang="ko">등록 해제되었으면 <see langword="true"/>이고, provider가 없거나 다르거나 활성 요청을 처리 중이면 <see langword="false"/>입니다.</para>
+        /// <para xml:lang="en"><see langword="true"/> when the provider was unregistered; <see langword="false"/> when it is absent, different, or serving an active request.</para>
+        /// </returns>
+        public static bool UnregisterMobileAdProvider(IEasterAdMobileAdProvider provider)
+        {
+            return EasterAdSdkClient.UnregisterMobileAdProvider(provider);
+        }
+
         private Camera? _targetCamera;  // Internal camera storage
 
         /// <summary>
@@ -271,6 +305,7 @@ namespace EasterAd
             if (_isDuplicateInstance || _easterAdSdkClient == null) { return; }
 
             _easterAdSdkClient.LogEnable = logEnable;
+            _easterAdSdkClient.MobileAdRoutine();
             _easterAdSdkClient.ImpressionRoutine();
 
 #if UNITY_EDITOR
@@ -369,8 +404,8 @@ namespace EasterAd
         }
 
         /// <summary>
-        /// <para xml:lang="ko">아동 대상 앱, 맞춤형 광고, 광고 요청 허용 여부 등 개인정보 신호를 설정합니다.</para>
-        /// <para xml:lang="en">Configures privacy signals such as child-directed treatment, personalized ads, and ad request permission.</para>
+        /// <para xml:lang="ko">SDK 로컬 개인정보 정책 상태를 설정합니다. 광고 요청이 금지되면 진행 중인 Android/iOS 외부 광고 작업을 즉시 취소합니다. 현재 serving 계약은 동의, 아동 대상 처리, 맞춤형 광고, 지역, 카테고리 값을 전송하지 않습니다.</para>
+        /// <para xml:lang="en">Configures SDK-local privacy policy state. Disallowing requests immediately cancels an active Android/iOS external ad operation. The current serving contract does not transmit consent, child-directed, personalized-ad, region, or category values.</para>
         /// </summary>
         public void ConfigurePrivacy(EasterAdPrivacyOptions options)
         {
@@ -378,38 +413,27 @@ namespace EasterAd
         }
 
         /// <summary>
-        /// <para xml:lang="ko">아동 대상 앱 여부를 간단히 설정합니다. 3세 이용가 또는 가족 대상 앱은 true 사용을 권장합니다.</para>
-        /// <para xml:lang="en">Convenience method for child-directed treatment. Use true for family or young-audience apps.</para>
+        /// <para xml:lang="ko">아동 대상 앱 여부를 설정합니다. 기존 동의, 요청 허용, 지역, 카테고리 정책은 보존하며 true이면 맞춤형 광고만 추가로 비활성화합니다.</para>
+        /// <para xml:lang="en">Sets child-directed treatment while preserving existing consent, request permission, region, and category policy. Setting true additionally disables personalized ads.</para>
         /// </summary>
         public void SetChildDirected(bool childDirected)
         {
-            _easterAdSdkClient!.ConfigurePrivacy(new EasterAdPrivacyOptions
-            {
-                ChildDirected = childDirected,
-                PersonalizedAdsAllowed = !childDirected,
-                AdRequestsAllowed = true
-            });
+            _easterAdSdkClient!.SetChildDirected(childDirected);
         }
 
         /// <summary>
-        /// <para xml:lang="ko">동의 상태와 맞춤형 광고 허용 여부를 설정합니다.</para>
-        /// <para xml:lang="en">Configures consent state and whether personalized ads are allowed.</para>
+        /// <para xml:lang="ko">로컬 동의 상태와 맞춤형 광고 허용 여부를 설정합니다. 현재 serving 계약은 이 값을 전송하지 않습니다.</para>
+        /// <para xml:lang="en">Configures local consent state and whether personalized ads are allowed. The current serving contract does not transmit these values.</para>
         /// </summary>
         public void SetPrivacyConsent(bool adRequestsAllowed, bool personalizedAdsAllowed, string consentString = "", string privacyRegion = "", bool childDirected = false)
         {
-            _easterAdSdkClient!.ConfigurePrivacy(new EasterAdPrivacyOptions
-            {
-                ChildDirected = childDirected,
-                PersonalizedAdsAllowed = personalizedAdsAllowed,
-                AdRequestsAllowed = adRequestsAllowed,
-                ConsentString = consentString ?? "",
-                PrivacyRegion = privacyRegion ?? ""
-            });
+            _easterAdSdkClient!.SetPrivacyConsent(adRequestsAllowed, personalizedAdsAllowed,
+                consentString ?? "", privacyRegion ?? "", childDirected);
         }
 
         /// <summary>
-        /// <para xml:lang="ko">광고 카테고리 차단/허용 목록을 설정합니다. 서버 정책과 함께 적용됩니다.</para>
-        /// <para xml:lang="en">Sets blocked and allowed ad categories. These are applied together with server-side policy.</para>
+        /// <para xml:lang="ko">광고 카테고리 차단/허용 목록을 로컬 정책 상태로 저장합니다. 현재 serving 계약은 이 목록을 전송하지 않으며 SDK는 서버 또는 vendor 필터링을 시행하지 않습니다.</para>
+        /// <para xml:lang="en">Stores blocked and allowed ad categories as local policy state. The current serving contract does not transmit these lists, and the SDK does not enforce server-side or vendor-side filtering.</para>
         /// </summary>
         public void SetAdCategoryPolicy(IEnumerable<string>? blockedCategories = null, IEnumerable<string>? allowedCategories = null)
         {
@@ -417,8 +441,8 @@ namespace EasterAd
         }
 
         /// <summary>
-        /// <para xml:lang="ko">오프라인 모드를 설정합니다. 활성화하면 광고 네트워크 요청을 수행하지 않습니다.</para>
-        /// <para xml:lang="en">Sets offline mode. When enabled, the SDK skips network ad requests.</para>
+        /// <para xml:lang="ko">오프라인 모드를 설정합니다. 활성화하면 광고 네트워크 요청을 수행하지 않고 진행 중인 Android/iOS 외부 광고 작업을 취소합니다.</para>
+        /// <para xml:lang="en">Sets offline mode. When enabled, the SDK skips network ad requests and cancels an active Android/iOS external ad operation.</para>
         /// </summary>
         public void SetOfflineMode(bool enabled)
         {
@@ -426,13 +450,34 @@ namespace EasterAd
         }
 
         /// <summary>
-        /// <para xml:lang="ko">로컬 킬스위치입니다. false로 설정하면 광고 네트워크 요청을 수행하지 않습니다.</para>
-        /// <para xml:lang="en">Local kill switch. When set to false, the SDK skips ad network requests.</para>
+        /// <para xml:lang="ko">로컬 킬스위치입니다. false로 설정하면 광고 네트워크 요청을 수행하지 않고 진행 중인 Android/iOS 외부 광고 작업을 취소합니다.</para>
+        /// <para xml:lang="en">Local kill switch. When set to false, the SDK skips ad network requests and cancels an active Android/iOS external ad operation.</para>
         /// </summary>
         public void SetAdRequestsEnabled(bool enabled)
         {
             _easterAdSdkClient!.SetAdRequestsEnabled(enabled);
         }
+
+        /// <summary>
+        /// <para xml:lang="ko">현재 실제 런타임이 외부 모바일 광고 provider 경로를 사용하는지 나타냅니다.</para>
+        /// <para xml:lang="en">Indicates whether the actual runtime uses the external mobile ad provider route.</para>
+        /// </summary>
+        /// <remarks>
+        /// <para xml:lang="ko">Android와 iOS에서만 <see langword="true"/>이며, 사용자 지정 telemetry 플랫폼 값은 이 결과를 바꾸지 않습니다.</para>
+        /// <para xml:lang="en">This is <see langword="true"/> only on Android and iOS. Custom telemetry platform values do not change routing.</para>
+        /// </remarks>
+        public bool UsesExternalMobileAds => _easterAdSdkClient != null && _easterAdSdkClient.UsesExternalMobileAds;
+
+        /// <summary>
+        /// <para xml:lang="ko">현재 실제 런타임 플랫폼에서 EasterAd 또는 등록된 모바일 provider가 광고 요청을 지원하는지 나타냅니다.</para>
+        /// <para xml:lang="en">Indicates whether EasterAd or the registered mobile-provider route supports ad requests on the actual runtime platform.</para>
+        /// </summary>
+        /// <remarks>
+        /// <para xml:lang="ko">2.0.0에서 Unity WebGL은 browser session transport 계약이 없어 fail-closed되므로 <see langword="false"/>입니다.</para>
+        /// <para xml:lang="en">This is <see langword="false"/> for Unity WebGL in 2.0.0 because no browser session-transport contract is defined.</para>
+        /// </remarks>
+        public bool SupportsAdsOnCurrentPlatform =>
+            _easterAdSdkClient != null && _easterAdSdkClient.SupportsAdRequestsOnCurrentPlatform;
 
         /// <summary>
         /// <para xml:lang="ko">광고 요청 결과가 관측될 때 호출됩니다.</para>
@@ -546,13 +591,18 @@ namespace EasterAd
             _easterAdSdkClient!.RemoveItemClient(key);
         }
 
+        internal void DestroyItemClient(ItemClient itemClient)
+        {
+            _easterAdSdkClient?.DestroyItem(itemClient);
+        }
+
         private List<string> GetAxesNames()
         {
             List<string> axesNames = new List<string>();
 #if UNITY_EDITOR
             UnityEngine.Object inputManager = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("ProjectSettings/InputManager.asset");
             if (inputManager == null) { return axesNames; }
-
+            
             SerializedObject obj = new SerializedObject(inputManager);
             SerializedProperty axisArray = obj.FindProperty("m_Axes");
 

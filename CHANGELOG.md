@@ -6,6 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+-   Added the pinned eight-assembly protobuf/AdCOM runtime bundle with stable Unity plugin metadata and package verification; editor-only `EasterAd.Core` remains excluded from runtime packages.
+
+### Changed
+
+-   Migrated non-mobile first-party sessions, intrinsic ad requests, impression reports, and display logs to the protobuf/AdCOM bindings generated from the pinned EasterAd contracts commit.
+-   Reinitialization now creates a replacement native-app session and preserves the existing session when creation or its `Set-Cookie` result fails; the removed `UpdateSession` contract is not restored.
+-   Kept Android/iOS external-provider routing and unsupported WebGL zero-network behavior unchanged while validating protobuf MIME, status, response bounds, creative safety, and contract field ranges fail-closed.
+-   Kept privacy, consent, child-directed treatment, and category policy as local request gates without adding fields to the pinned session or intrinsic-ad wire contracts.
+
+### Fixed
+
+-   Fixed URP segmentation rendering so setup, draw, and cleanup execute in the same native command-buffer ordering boundary.
+
+## [2.0.0] - 2026-08-20
+
+### Added
+
+-   Added the vendor-neutral `IEasterAdMobileAdProvider` boundary for Android/iOS load-and-show delegation, logical placement mapping, exactly-once terminal results, and per-request cancellation.
+-   Added mobile provider registration and safe-point unregistration through `EasterAdSdk`.
 -   Added Dashboard integration in `Window > EasterAd` to connect with the EasterAd Developer Dashboard by API key and apply dashboard Game ID, SDK Key, and Ad Unit IDs to Unity SDK settings and placements.
 -   Added unified Inventory and Placement management in `Window > EasterAd`, where scene-placed inventory is Active and unplaced inventory is shown in Archive.
 -   Added Managed Scenes in `Window > EasterAd` Settings to scope duplicate Ad Unit ID scans, auto-add placement scenes, and prune scenes with no EasterAd placements.
@@ -15,7 +34,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
--   Replaced the EasterAd-specific serving platform field with AdCOM device type, operating system, language, model, screen, and OS-version fields in session requests.
+-   **Breaking:** Android/iOS now delegate demand, creative, presentation, refresh, impression, and click ownership to the registered external provider. EasterAd no longer creates its own mobile session/request, applies its own ad texture, records its own impression, or falls back to the in-game renderer when the provider is missing, fails, or returns no fill.
+-   Kept EasterAd-owned `Plane`/`CanvasItem` in-game rendering unchanged on supported non-WebGL non-mobile platforms. Runtime routing uses the actual Unity platform; Custom Platform remains telemetry-only.
+-   Marked Unity WebGL unsupported and fail-closed until a browser CORS/SameSite/cookie session contract and browser end-to-end transport gate exist. WebGL performs no first-party or mobile-provider request and keeps in-game ad surfaces hidden.
+-   Changed external provider callbacks to be consumed through the Unity main-thread lifecycle queue after EasterAd privacy, offline, ad-request, and kill-switch policy gates pass.
+-   Restricted supported in-game creative and click URLs to absolute HTTP(S) without URL userinfo, disabled redirects for creative image downloads, assigned post-click redirect control to the host/browser, and documented the dedicated cookie-free creative CDN origin requirement; HTML, VAST, unknown MIME, and WebView fallback remain unsupported.
+-   Limited supported in-game creative decoding to PNG/JPEG with deterministic request, encoded-size, and decoded-pixel caps, and suppressed late texture mutation after an Item load is destroyed or replaced.
 -   Redesigned `Window > EasterAd` as a UI Toolkit console aligned with the EasterAd web dashboard layout, colors, and folder/component structure.
 -   Moved dashboard API key, organization, and game selection into Settings and persist the selected dashboard project in EditorPrefs.
 -   Changed dashboard data updates to run when the window opens, tabs/settings are used, dashboard project selection changes, or the error banner's Refresh button is pressed instead of on a fixed interval.

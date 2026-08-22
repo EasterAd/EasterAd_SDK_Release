@@ -1,17 +1,22 @@
 {
   "name": "com.easterad.easterad",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "displayName": "Easter Ad",
-  "description": "Intrinsic in-game advertising plugin for Unity",
+  "description": "Platform-routed Unity advertising SDK with external mobile providers, supported in-game surfaces, and fail-closed WebGL",
   "unity": "6000.0",
   "author": {
     "name": "Easterad",
     "email": "easterad-official@easterad.com",
     "url": "https://easterad.com"
   },
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  },
   "keywords": [
     "unity",
     "advertising",
+    "mobile",
+    "adapter",
     "in-game",
     "easter",
     "ad",
